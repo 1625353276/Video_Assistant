@@ -16,6 +16,14 @@ ffmpeg-python>=0.2.0
 numpy>=1.24.0
 pandas>=2.0.0
 
+# 文本向量和检索
+sentence-transformers>=2.2.0
+scipy>=1.10.0
+transformers>=4.41.0
+huggingface-hub>=0.20.0
+scikit-learn>=1.7.0
+tqdm>=4.60.0
+
 # 系统工具
 pathlib2>=2.3.7
 argparse
@@ -45,3 +53,7 @@ pyyaml>=6.0
 # 3. Whisper模型会在首次使用时自动下载
 #    - 模型大小：tiny(75MB)、base(142MB)、small(466MB)、medium(1.5GB)、large(2.9GB)
 #    - 建议使用base或small模型平衡速度和准确性
+#
+# 4. 句子转换器模型
+#    - 模型文件保存在项目的models目录中，便于管理和部署
+#    - 支持多设备自动检测（CUDA/MPS/CPU）
