@@ -34,13 +34,13 @@ Video_Assistant/
 │   ├── speech/           # 语音识别模块
 │   │   ├── whisper_asr.py      # Whisper语音识别
 │   │   └── multimodal_refine.py # 多模态优化(待开发)
-│   ├── text/             # 文本处理模块
+│   ├── text/             # 文本处理模块 ✅
 │   │   ├── segmenter.py        # 文本分段
 │   │   ├── text_cleaner.py     # 文本清理
 │   │   └── translator.py       # 文本翻译
 │   ├── retrieval/        # 检索系统模块
 │   │   ├── vector_store.py     # 向量存储 ✅
-│   │   ├── bm25_retriever.py   # BM25检索器 ⏳
+│   │   ├── bm25_retriever.py   # BM25检索器 ✅
 │   │   ├── hybrid_retriever.py # 混合检索器 ⏳
 │   │   └── multi_query.py      # 多查询生成 ⏳
 │   ├── qa/               # 问答系统模块(待开发)
@@ -84,7 +84,20 @@ Whisper语音识别 (WhisperASR)
 多格式结果保存 (FileManager)
 ```
 
-### 2. 向量检索流程 (新增)
+### 2. 文本处理流程 (新增)
+```
+原始转写文本
+    ↓
+文本清洗 (TextCleaner) - 去除填充词、规范化标点
+    ↓
+文本分段 (TextSegmenter) - 按句子/时间/语义分段
+    ↓
+文本翻译 (Translator) - 多语言支持
+    ↓
+处理结果保存
+```
+
+### 3. 向量检索流程 (新增)
 ```
 JSON转写数据
     ↓
@@ -97,7 +110,7 @@ JSON转写数据
 返回相关内容片段和时间戳
 ```
 
-### 3. 智能问答流程 (规划中)
+### 4. 智能问答流程 (规划中)
 ```
 用户查询
     ↓
@@ -146,9 +159,35 @@ python test_pipeline.py
 
 # 运行向量存储测试
 python tests/test_vector_store.py
+
+# 运行文本处理测试（待添加）
+# python tests/test_text_processing.py
 ```
 
-### 4. 向量检索使用
+### 4. 文本处理使用
+```python
+from modules.text.text_cleaner import TextCleaner
+from modules.text.segmenter import TextSegmenter
+from modules.text.translator import TextTranslator
+
+# 文本清洗
+cleaner = TextCleaner()
+cleaned_text = cleaner.clean_text("嗯 这个 就是 今天的 内容")
+
+# 文本分段
+segmenter = TextSegmenter(max_tokens=400)
+segments = segmenter.segment_by_sentences(long_text, max_sentences=5)
+
+# 文本翻译
+translator = TextTranslator()
+result = translator.translate("深度学习", target_lang="en")
+print(result.translated_text)  # "deep learning"
+
+# 批量翻译转录结果
+translated_transcript = translator.translate_transcript(transcript_data, "en")
+```
+
+### 5. 向量检索使用
 ```python
 from modules.retrieval.vector_store import VectorStore
 
@@ -197,6 +236,65 @@ vector_store.save_index("data/vector_index.pkl")
 | paraphrase-MiniLM-L6-v2 | 80MB | 384 | 专门优化句子相似度 | 相似度匹配 |
 
 ## 输出格式
+
+### 文本处理输出格式
+
+#### 清洗后文本格式
+```json
+{
+  "original_text": "嗯 这个 就是 今天的 内容",
+  "cleaned_text": "今天的 内容",
+  "removed_fillers": ["嗯", "这个", "就是"],
+  "statistics": {
+    "original_length": 9,
+    "cleaned_length": 4,
+    "filler_count": 3,
+    "filler_ratio": 0.33
+  }
+}
+```
+
+#### 分段后文本格式
+```json
+{
+  "segments": [
+    {
+      "segment_id": 0,
+      "text": "第一段文本内容",
+      "start_time": 0.0,
+      "end_time": 5.2,
+      "token_count": 45,
+      "sentence_count": 2
+    },
+    {
+      "segment_id": 1,
+      "text": "第二段文本内容",
+      "start_time": 5.2,
+      "end_time": 10.4,
+      "token_count": 38,
+      "sentence_count": 1
+    }
+  ],
+  "total_segments": 2,
+  "segmentation_strategy": "by_sentences"
+}
+```
+
+#### 翻译后文本格式
+```json
+{
+  "original_text": "深度学习是机器学习的一个分支",
+  "translated_text": "Deep learning is a branch of machine learning",
+  "source_lang": "zh",
+  "target_lang": "en",
+  "confidence": 0.92,
+  "translation_method": "googletrans",
+  "metadata": {
+    "translation_time": "2024-01-13T10:30:00",
+    "cache_hit": false
+  }
+}
+```
 
 ### JSON格式 (推荐)
 ```json
@@ -277,6 +375,27 @@ WEBVTT
 第二段文本
 ```
 
+## 文本处理功能
+
+### 文本清洗 (TextCleaner)
+- **填充词去除**: 自动识别并去除常见口语填充词("嗯""呃""那个"等)
+- **标点规范化**: 统一标点符号格式，修复常见标点错误
+- **重复句去除**: 检测并去除重复的句子或段落
+- **统计信息**: 提供清洗前后的文本统计对比
+
+### 文本分段 (TextSegmenter)
+- **句子分段**: 按句子边界进行智能分段
+- **时间戳分段**: 基于Whisper转录结果的时间戳进行分段
+- **固定长度分段**: 按指定的token数量进行分段，支持重叠
+- **语义分段**: 基于内容语义进行智能分段(规划中)
+
+### 文本翻译 (Translator)
+- **多语言支持**: 基于Googletrans支持多种语言互译
+- **自动语言检测**: 智能识别源文本语言
+- **批量翻译**: 支持段落和完整转录结果的批量翻译
+- **翻译缓存**: 本地缓存翻译结果，提高效率
+- **回退机制**: 翻译服务失败时提供模拟翻译
+
 ## 向量检索功能
 
 ### 检索结果格式
@@ -338,8 +457,8 @@ print(f"向量维度: {stats['vector_dimension']}")
 ## 开发指南
 
 ### 项目当前状态
-- **已完成**: 视频处理、音频提取、Whisper语音识别、多格式输出、向量存储和检索
-- **开发中**: 多模态优化、文本处理、BM25检索器、多查询生成、混合检索器
+- **已完成**: 视频处理、音频提取、Whisper语音识别、多格式输出、向量存储和检索、文本处理(分段、清洗、翻译)
+- **开发中**: 多模态优化、BM25检索器、多查询生成、混合检索器
 - **待开发**: 问答系统、Web部署、配置文件完善
 
 ### 添加新功能
@@ -415,6 +534,24 @@ print(f"向量维度: {stats['vector_dimension']}")
    解决: 考虑使用BM25检索或混合检索
    ```
 
+6. **翻译服务失败**
+   ```
+   错误: Google翻译服务不可用
+   解决: 检查网络连接，或使用模拟翻译模式
+   ```
+
+7. **文本分段效果不佳**
+   ```
+   问题: 分段结果不符合预期
+   解决: 调整max_tokens参数或尝试不同的分段策略
+   ```
+
+8. **文本清洗过度**
+   ```
+   问题: 清洗后文本丢失重要内容
+   解决: 检查filler_words列表，移除不应被视为填充词的词汇
+   ```
+
 ## 扩展性
 
 系统采用模块化设计，易于扩展：
@@ -431,11 +568,13 @@ print(f"向量维度: {stats['vector_dimension']}")
 1. **首次运行**: Whisper模型和Sentence-Transformers模型会在首次使用时自动下载
 2. **模型存储**: 模型文件保存到项目的models目录，便于管理和部署
 3. **大文件处理**: 建议视频文件不超过2GB
-4. **语言支持**: Whisper支持99种语言的自动识别
-5. **隐私保护**: 所有处理都在本地完成，不会上传数据
+4. **语言支持**: Whisper支持99种语言的自动识别；翻译功能支持Googletrans支持的语言
+5. **隐私保护**: 所有处理都在本地完成，不会上传数据（翻译服务除外）
 6. **临时文件**: 系统会自动清理临时音频文件
 7. **GPU支持**: 自动检测并使用GPU加速（如果可用）
 8. **Git忽略**: 模型文件和转写结果已配置.gitignore，不会上传到版本控制
+9. **翻译限制**: Google翻译可能有API调用限制，建议控制翻译频率
+10. **文本处理顺序**: 推荐处理顺序为 清洗 → 分段 → 翻译 → 向量化
 
 ## 项目进展总结
 
@@ -447,6 +586,19 @@ print(f"向量维度: {stats['vector_dimension']}")
 - **索引管理**: 支持向量索引的保存/加载，使用pickle格式持久化
 - **模型缓存**: 模型文件自动保存到项目本地目录(87.4MB)
 - **镜像支持**: 多镜像站点配置，默认使用官方源，支持手动切换
+
+#### 文本处理模块 (Text Processing)
+- **文本清洗 (TextCleaner)**: 去除口语填充词("嗯""呃""那个"等)、规范化标点、去除重复句
+- **文本分段 (TextSegmenter)**: 支持按句子、时间戳、固定token长度和智能语义分段
+- **文本翻译 (Translator)**: 基于Googletrans的多语言翻译，支持批量翻译和缓存机制
+- **翻译策略**: 自动语言检测、回退机制、翻译结果缓存
+
+#### BM25检索器 (BM25Retriever)
+- **BM25算法**: 完整实现BM25算法，支持k1、b参数调优
+- **多语言支持**: 自动语言检测，支持中英文分词
+- **倒排索引**: 高效的词频统计和文档频率计算
+- **检索功能**: 关键词精确匹配，支持top-k和阈值过滤
+- **索引持久化**: 支持索引保存和加载，使用pickle格式
 
 #### 项目管理
 - **Git配置**: 完善的.gitignore规则，忽略模型文件、__pycache__和转写结果
@@ -460,13 +612,15 @@ print(f"向量维度: {stats['vector_dimension']}")
 - ✅ 语音识别 (WhisperASR) - 支持多种模型，GPU/CPU自动检测
 - ✅ 文件管理 (FileManager) - 多格式输出，JSON/TXT/SRT/VTT
 - ✅ 向量存储 (VectorStore) - 完整实现，支持JSON转写数据检索
+- ✅ 文本处理 (TextCleaner, TextSegmenter, Translator) - 完整实现，支持清洗、分段、翻译
+- ✅ BM25检索器 (BM25Retriever) - 完整实现，支持中英文关键词检索
 
 #### 待开发模块
-- ⏳ BM25检索器 (bm25_retriever.py) - 关键词匹配检索
-- ⏳ 多查询生成 (multi_query.py) - 查询扩展和多样化
-- ⏳ 混合检索器 (hybrid_retriever.py) - 向量和BM25结果融合
+- ⏳ 多查询生成 (multi_query.py) - 文件存在但未实现
+- ⏳ 混合检索器 (hybrid_retriever.py) - 文件存在但未实现
 - ⏳ QA系统模块 - 对话链、记忆管理、提示模板
-- ⏳ 配置文件完善 - 模型配置、系统设置
+- ⏳ 配置文件完善 - 模型配置、系统设置(文件存在但内容为空)
+- ⏳ Web部署 (Flask应用) - app.py文件存在但未实现
 
 ### 🔧 技术栈配置
 
@@ -476,6 +630,10 @@ print(f"向量维度: {stats['vector_dimension']}")
 - **OpenAI Whisper**: 语音识别，99种语言自动检测
 - **FFmpeg**: 音视频处理，格式转换和提取
 - **SciPy**: 向量计算，相似度计算优化
+- **Googletrans 4.0.0-rc1**: 文本翻译服务
+- **Requests 2.32.5**: HTTP请求库
+- **Scikit-learn 1.7.0**: 机器学习工具库
+- **Transformers 4.41.0**: HuggingFace变换器库
 
 #### 模型文件
 - **Whisper模型**: tiny/base/small/medium/large，按需下载
@@ -494,11 +652,25 @@ print(f"向量维度: {stats['vector_dimension']}")
 ```
 Video_Assistant/
 ├── modules/retrieval/vector_store.py ✅
+├── modules/retrieval/bm25_retriever.py ✅ (新增完成)
+├── modules/text/ ✅
+│   ├── text_cleaner.py ✅
+│   ├── segmenter.py ✅
+│   └── translator.py ✅
 ├── modules/video/ ✅
 ├── modules/speech/ ✅
 ├── modules/utils/ ✅
+├── tests/test_vector_store.py ✅
+├── tests/test_bm25_retriever.py ✅ (新增)
+├── tests/test_retrieval_integration.py ✅ (新增)
 ├── models/sentence-transformers/ ✅
-├── data/transcripts/ ✅
+├── data/transcripts/ ✅ (包含多种处理结果)
+│   ├── *_original.json (原始转录)
+│   ├── *_cleaned.json (清洗后)
+│   ├── *_segments.json (分段后)
+│   └── *_translated.json (翻译后)
+├── config/ ⏳ (文件存在但内容为空)
+├── deploy/ ⏳ (文件存在但未实现)
 ├── .gitignore ✅
 └── IFLOW.md ✅
 ```
@@ -507,9 +679,11 @@ Video_Assistant/
 
 基于当前进度，建议按优先级继续开发：
 
-1. **高优先级**: BM25检索器实现 - 关键词匹配补充向量检索
-2. **中优先级**: 多查询生成和混合检索 - 提高检索准确性
-3. **低优先级**: QA系统模块和配置文件完善
+1. **高优先级**: 多查询生成器实现 - 查询扩展和多样化
+2. **中优先级**: 混合检索器实现 - 向量和BM25结果融合
+3. **中优先级**: 配置文件完善 - 模型配置和系统设置
+4. **低优先级**: QA系统模块开发 - 对话链和记忆管理
+5. **低优先级**: Web部署和API接口开发
 
 ### 💡 重要经验教训
 
@@ -517,6 +691,9 @@ Video_Assistant/
 2. **依赖版本管理**: 需要特别注意版本兼容性，如httpx与googletrans冲突
 3. **模型缓存策略**: 本地缓存提高了部署便利性和离线使用能力
 4. **Git忽略配置**: 避免大文件上传到版本控制，保持仓库清洁
+5. **文本处理流程设计**: 清洗→分段→翻译→向量化的顺序效果最佳
+6. **翻译服务稳定性**: 网络服务依赖需要设计回退机制
+7. **模块化开发优势**: 文本处理模块的独立性便于测试和维护
 
 ## 许可证
 
