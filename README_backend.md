@@ -10,6 +10,9 @@ AI视频助手后端系统专注于视频内容分析，提供从视频文件到
 - ✅ **视频完整性校验**: 自动检测视频文件完整性和基本信息
 - ✅ **音频提取**: 从视频中提取高质量音频流
 - ✅ **语音转文本**: 使用Whisper模型进行多语言语音识别
+- ✅ **文本清洗**: 去除口语填充词、重复句、异常符号，规范化标点
+- ✅ **智能分段**: 支持按句子、时间戳、token数、语义等多种分段策略
+- ✅ **多语言翻译**: 解决视频语言与模型语言不匹配问题，支持中英文互译
 - ✅ **结构化输出**: 支持JSON、TXT、SRT、VTT多种输出格式
 - ✅ **时间戳保留**: 精确的词级别和段落级别时间戳
 
@@ -23,6 +26,12 @@ AI视频助手后端系统专注于视频内容分析，提供从视频文件到
 音频提取 (AudioExtractor)
     ↓
 Whisper语音识别 (WhisperASR)
+    ↓
+文本清洗 (TextCleaner)
+    ↓
+文本分段 (TextSegmenter)
+    ↓
+文本翻译 (TextTranslator)
     ↓
 结构化结果保存 (FileManager)
 ```
@@ -66,6 +75,12 @@ python main.py --video /path/to/your/video.mp4 --model base
 - `--output`: 输出目录路径（默认: data/transcripts）
 - `--model`: Whisper模型大小（默认: base）
   - 可选值: tiny, base, small, medium, large
+- `--no-clean`: 跳过文本清洗步骤
+- `--no-segment`: 跳过文本分段步骤
+- `--no-translate`: 跳过文本翻译步骤
+- `--target-lang`: 翻译目标语言（默认: en）
+  - 可选值: zh, en
+- `--max-tokens`: 分段最大token数（默认: 400）
 
 ### 模型选择建议
 
@@ -79,19 +94,25 @@ python main.py --video /path/to/your/video.mp4 --model base
 
 ## 输出格式
 
-### JSON格式（推荐）
+系统会生成多个处理阶段的文件：
+
+### 1. 原始转录结果 (original.json)
+Whisper直接输出的原始转录结果，包含完整的语音识别信息。
+
+### 2. 清洗后结果 (cleaned.json)
+经过TextCleaner处理后的结果，去除了口语填充词和异常符号：
 
 ```json
 {
   "audio_file": "video.mp4",
   "language": "zh",
-  "text": "完整的转写文本...",
+  "text": "清洗后的转写文本...",
   "segments": [
     {
       "id": 0,
       "start": 0.0,
       "end": 5.2,
-      "text": "第一段文本",
+      "text": "清洗后的第一段文本",
       "confidence": 0.95
     }
   ],
@@ -100,6 +121,76 @@ python main.py --video /path/to/your/video.mp4 --model base
   "avg_confidence": 0.92
 }
 ```
+
+### 3. 翻译后结果 (translated.json)
+经过TextTranslator翻译后的结果，用于embedding模型或跨语言问答：
+
+```json
+{
+  "audio_file": "video.mp4",
+  "language": "zh",
+  "text": "Translated text...",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 5.2,
+      "text": "Translated first segment",
+      "confidence": 0.95,
+      "translation_metadata": {
+        "original_text": "清洗后的第一段文本",
+        "source_lang": "zh",
+        "target_lang": "en",
+        "method": "googletrans"
+      }
+    }
+  ],
+  "model_used": "base",
+  "total_duration": 120.5,
+  "avg_confidence": 0.92,
+  "translation_metadata": {
+    "original_text": "清洗后的转写文本...",
+    "source_lang": "zh",
+    "target_lang": "en",
+    "method": "googletrans"
+  }
+}
+```
+
+### 4. 分段结果 (segments.json)
+TextSegmenter的分段结果，包含详细的分段信息和统计数据：
+
+```json
+{
+  "segments": [
+    {
+      "segment_id": 0,
+      "text": "第一段文本内容...",
+      "start_time": 0.0,
+      "end_time": 30.5,
+      "token_count": 385
+    },
+    {
+      "segment_id": 1,
+      "text": "第二段文本内容...",
+      "start_time": 30.5,
+      "end_time": 65.2,
+      "token_count": 412
+    }
+  ],
+  "statistics": {
+    "total_segments": 5,
+    "total_tokens": 1856,
+    "avg_tokens_per_segment": 371.2,
+    "min_tokens": 256,
+    "max_tokens": 458,
+    "has_timestamps": true
+  }
+}
+```
+
+### 5. 清洗文本文件 (cleaned.txt)
+纯文本格式的清洗后结果，便于阅读和进一步处理。
 
 ### 文本格式
 
@@ -226,6 +317,10 @@ AI_Video_Assistant/
 │   │   └── audio_extractor.py  # 音频提取模块
 │   ├── speech/
 │   │   └── whisper_asr.py      # Whisper语音识别
+│   ├── text/                   # 文本处理模块
+│   │   ├── text_cleaner.py     # 文本清洗模块
+│   │   ├── segmenter.py        # 文本分段模块
+│   │   └── translator.py       # 翻译模块
 │   └── utils/
 │       └── file_manager.py     # 文件管理工具
 ├── data/                    # 数据目录
@@ -242,6 +337,127 @@ AI_Video_Assistant/
 2. 更新测试脚本
 3. 更新文档
 4. 运行测试验证
+
+## Text模块详解
+
+### TextCleaner - 文本清洗模块
+
+**功能**：对语音识别生成的文本进行清洗和规范化
+
+**主要处理内容**：
+- 去除口语填充词（"呃""嗯""那个"等）
+- 去掉重复句
+- 去掉异常符号
+- 基本标点规范化
+
+**使用示例**：
+```python
+from modules.text import TextCleaner
+
+cleaner = TextCleaner()
+cleaned_text = cleaner.clean_text("嗯我们今天主要讲一下深度学习啊")
+# 输出: "我们今天主要讲解深度学习。"
+```
+
+### TextSegmenter - 文本分段模块
+
+**功能**：将长文本切分成适合模型处理的小段
+
+**支持的分段策略**：
+- 按句子分段
+- 按时间戳分段（基于Whisper转录结果）
+- 按固定token长度分段
+- 智能语义分段
+- 混合分段策略
+
+**使用示例**：
+```python
+from modules.text import TextSegmenter
+
+segmenter = TextSegmenter(max_tokens=400)
+segments = segmenter.hybrid_segment(text, transcript)
+```
+
+### TextTranslator - 翻译模块
+
+**功能**：解决视频语言与模型语言不匹配问题
+
+**支持场景**：
+- 中文视频 + 英文embedding模型
+- 英文视频 + 中文问答系统
+
+**使用示例**：
+```python
+from modules.text import TextTranslator
+
+translator = TextTranslator()
+result = translator.translate("深度学习", target_lang="en")
+# 输出: "deep learning"
+```
+
+### 完整使用流程
+
+```python
+from modules.text import TextCleaner, TextSegmenter, TextTranslator
+
+# 初始化
+cleaner = TextCleaner()
+segmenter = TextSegmenter(max_tokens=400)
+translator = TextTranslator()
+
+# 处理流程
+# 1. 清洗文本
+cleaned_transcript = cleaner.clean_transcript(transcript_result)
+
+# 2. 文本分段
+segments = segmenter.hybrid_segment(
+    cleaned_transcript.get("text", ""), 
+    cleaned_transcript
+)
+
+# 3. 翻译文本
+translated_transcript = translator.translate_transcript(
+    cleaned_transcript, 
+    target_lang="en"
+)
+```
+
+### 高级配置
+
+#### 自定义填充词
+```python
+cleaner = TextCleaner()
+cleaner.filler_words.extend(["你知道", "就是说"])  # 添加自定义填充词
+cleaner.filler_pattern = cleaner._build_filler_pattern()  # 重建正则表达式
+```
+
+#### 分段策略选择
+```python
+# 按句子分段，每段最多3个句子
+segments = segmenter.segment_by_sentences(text, max_sentences=3)
+
+# 按时间戳分段，每段最多30秒
+segments = segmenter.segment_by_timestamp(transcript, max_duration=30.0)
+
+# 按token分段，每段最多500个token
+segments = segmenter.segment_by_tokens(text, max_tokens=500)
+
+# 按语义分段，相似度阈值0.3
+segments = segmenter.segment_by_semantic(text, similarity_threshold=0.3)
+```
+
+#### 翻译配置
+```python
+# 使用Google翻译
+translator = TextTranslator(default_method="googletrans")
+
+# 使用模拟翻译（用于测试）
+translator = TextTranslator(default_method="mock")
+
+# 加载/保存翻译缓存
+translator.load_translation_cache("cache.json")
+translator.save_translation_cache("cache.json")
+```
 
 ## 许可证
 
