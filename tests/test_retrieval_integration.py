@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from modules.retrieval.vector_store import VectorStore
 from modules.retrieval.bm25_retriever import BM25Retriever
+from modules.retrieval.multi_query import MultiQueryGenerator
 
 
 def load_test_transcript():
@@ -310,6 +311,228 @@ def test_performance_comparison():
     return True
 
 
+def test_multi_query_integration():
+    """测试多查询生成器与检索系统的集成"""
+    print("\n" + "=" * 60)
+    print("测试多查询生成器集成")
+    print("=" * 60)
+    
+    try:
+        # 加载测试数据
+        segments = load_test_transcript()
+        print(f"加载了 {len(segments)} 个视频片段")
+        
+        # 创建检索器和多查询生成器
+        vector_store = VectorStore()
+        bm25_retriever = BM25Retriever()
+        multi_query_generator = MultiQueryGenerator(
+            enable_rule_based=True,
+            enable_model_based=False,  # 禁用模型避免依赖问题
+            max_queries=5
+        )
+        
+        # 添加文档
+        print("\n添加文档到检索器...")
+        vector_store.add_documents(segments)
+        bm25_retriever.add_documents(segments)
+        
+        # 测试查询
+        test_queries = [
+            "GPS定位技术",
+            "smartphone location", 
+            "卫星导航系统"
+        ]
+        
+        print("\n多查询生成和检索测试:")
+        print("=" * 60)
+        
+        for query in test_queries:
+            print(f"\n原始查询: '{query}'")
+            print("-" * 40)
+            
+            # 生成多查询
+            multi_result = multi_query_generator.generate_queries(query)
+            print(f"生成了 {len(multi_result.generated_queries)} 个查询:")
+            
+            for i, q in enumerate(multi_result.generated_queries):
+                print(f"  {i+1}. {q.query} [权重: {q.weight:.3f}] [方法: {q.method}]")
+            
+            # 对每个生成的查询进行检索
+            print("\n检索结果:")
+            print(f"{'查询':<20} {'向量结果':<8} {'BM25结果':<8} {'最佳匹配'}")
+            print("-" * 60)
+            
+            all_results = {}
+            
+            for q in multi_result.generated_queries:
+                # 向量存储检索
+                try:
+                    vs_results = vector_store.search(q.query, top_k=1)
+                    vs_count = len(vs_results)
+                    vs_best = vs_results[0]["document"]["text"][:30] + "..." if vs_results else "无"
+                except:
+                    vs_count = 0
+                    vs_best = "错误"
+                
+                # BM25检索
+                try:
+                    bm25_results = bm25_retriever.search(q.query, top_k=1)
+                    bm25_count = len(bm25_results)
+                    bm25_best = bm25_results[0]["document"]["text"][:30] + "..." if bm25_results else "无"
+                except:
+                    bm25_count = 0
+                    bm25_best = "错误"
+                
+                # 记录结果
+                all_results[q.query] = {
+                    "weight": q.weight,
+                    "vs_count": vs_count,
+                    "bm25_count": bm25_count,
+                    "vs_best": vs_best,
+                    "bm25_best": bm25_best
+                }
+                
+                print(f"{q.query[:20]:<20} {vs_count:<8} {bm25_count:<8} {vs_best}")
+            
+            # 分析多查询效果
+            print(f"\n多查询效果分析:")
+            total_vs_results = sum(r["vs_count"] for r in all_results.values())
+            total_bm25_results = sum(r["bm25_count"] for r in all_results.values())
+            
+            print(f"  总向量检索结果: {total_vs_results}")
+            print(f"  总BM25检索结果: {total_bm25_results}")
+            print(f"  平均每查询向量结果: {total_vs_results/len(all_results):.1f}")
+            print(f"  平均每查询BM25结果: {total_bm25_results/len(all_results):.1f}")
+        
+        print("\n✅ 多查询生成器集成测试完成")
+        
+    except Exception as e:
+        print(f"\n❌ 测试失败: {str(e)}")
+        return False
+    
+    return True
+
+
+def test_multi_query_enhanced_retrieval():
+    """测试多查询增强检索效果"""
+    print("\n" + "=" * 60)
+    print("测试多查询增强检索效果")
+    print("=" * 60)
+    
+    try:
+        # 加载测试数据
+        segments = load_test_transcript()
+        
+        # 创建检索器和多查询生成器
+        vector_store = VectorStore()
+        bm25_retriever = BM25Retriever()
+        multi_query_generator = MultiQueryGenerator(
+            enable_rule_based=True,
+            enable_model_based=False,
+            max_queries=8
+        )
+        
+        # 添加文档
+        vector_store.add_documents(segments)
+        bm25_retriever.add_documents(segments)
+        
+        # 测试查询
+        test_query = "手机定位原理"
+        
+        print(f"测试查询: '{test_query}'")
+        print("=" * 40)
+        
+        # 单查询检索
+        print("\n单查询检索结果:")
+        vs_single = vector_store.search(test_query, top_k=5)
+        bm25_single = bm25_retriever.search(test_query, top_k=5)
+        
+        print(f"向量存储: {len(vs_single)} 个结果")
+        for i, result in enumerate(vs_single):
+            text = result["document"]["text"][:50] + "..."
+            print(f"  {i+1}. [相似度: {result['similarity']:.3f}] {text}")
+        
+        print(f"\nBM25检索: {len(bm25_single)} 个结果")
+        for i, result in enumerate(bm25_single):
+            text = result["document"]["text"][:50] + "..."
+            print(f"  {i+1}. [分数: {result['score']:.3f}] {text}")
+        
+        # 多查询增强检索
+        print(f"\n多查询增强检索结果:")
+        multi_result = multi_query_generator.generate_queries(test_query)
+        
+        # 收集所有检索结果
+        all_vs_docs = {}
+        all_bm25_docs = {}
+        
+        for q in multi_result.generated_queries:
+            # 向量存储检索
+            vs_results = vector_store.search(q.query, top_k=3)
+            for result in vs_results:
+                doc_id = result["document"]["id"]
+                if doc_id not in all_vs_docs:
+                    all_vs_docs[doc_id] = {
+                        "document": result["document"],
+                        "max_similarity": result["similarity"],
+                        "query_hits": []
+                    }
+                else:
+                    all_vs_docs[doc_id]["max_similarity"] = max(
+                        all_vs_docs[doc_id]["max_similarity"], 
+                        result["similarity"]
+                    )
+                all_vs_docs[doc_id]["query_hits"].append(q.query)
+            
+            # BM25检索
+            bm25_results = bm25_retriever.search(q.query, top_k=3)
+            for result in bm25_results:
+                doc_id = result["document"]["id"]
+                if doc_id not in all_bm25_docs:
+                    all_bm25_docs[doc_id] = {
+                        "document": result["document"],
+                        "max_score": result["score"],
+                        "query_hits": []
+                    }
+                else:
+                    all_bm25_docs[doc_id]["max_score"] = max(
+                        all_bm25_docs[doc_id]["max_score"], 
+                        result["score"]
+                    )
+                all_bm25_docs[doc_id]["query_hits"].append(q.query)
+        
+        # 排序并显示结果
+        print(f"\n增强向量检索: {len(all_vs_docs)} 个唯一结果")
+        sorted_vs = sorted(all_vs_docs.values(), key=lambda x: x["max_similarity"], reverse=True)
+        for i, doc_data in enumerate(sorted_vs[:5]):
+            text = doc_data["document"]["text"][:50] + "..."
+            print(f"  {i+1}. [相似度: {doc_data['max_similarity']:.3f}] {text}")
+            print(f"      匹配查询: {', '.join(doc_data['query_hits'])}")
+        
+        print(f"\n增强BM25检索: {len(all_bm25_docs)} 个唯一结果")
+        sorted_bm25 = sorted(all_bm25_docs.values(), key=lambda x: x["max_score"], reverse=True)
+        for i, doc_data in enumerate(sorted_bm25[:5]):
+            text = doc_data["document"]["text"][:50] + "..."
+            print(f"  {i+1}. [分数: {doc_data['max_score']:.3f}] {text}")
+            print(f"      匹配查询: {', '.join(doc_data['query_hits'])}")
+        
+        # 效果对比
+        print(f"\n检索效果对比:")
+        print(f"  单查询向量检索: {len(vs_single)} 个结果")
+        print(f"  多查询向量检索: {len(all_vs_docs)} 个结果")
+        print(f"  召回率提升: {((len(all_vs_docs) - len(vs_single)) / len(vs_single) * 100):.1f}%")
+        print(f"  单查询BM25检索: {len(bm25_single)} 个结果")
+        print(f"  多查询BM25检索: {len(all_bm25_docs)} 个结果")
+        print(f"  召回率提升: {((len(all_bm25_docs) - len(bm25_single)) / max(len(bm25_single), 1) * 100):.1f}%")
+        
+        print("\n✅ 多查询增强检索效果测试完成")
+        
+    except Exception as e:
+        print(f"\n❌ 测试失败: {str(e)}")
+        return False
+    
+    return True
+
+
 def main():
     """运行所有集成测试"""
     print("开始检索系统集成测试")
@@ -318,7 +541,9 @@ def main():
     tests = [
         test_vector_store_vs_bm25,
         test_hybrid_retrieval_concept,
-        test_performance_comparison
+        test_performance_comparison,
+        test_multi_query_integration,
+        test_multi_query_enhanced_retrieval
     ]
     
     passed = 0
