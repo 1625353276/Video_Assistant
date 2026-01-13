@@ -1,12 +1,7 @@
 # AI视频助手 - 后端依赖包
-
-# 核心框架
-<<<<<<< HEAD
-
-=======
-torch>=2.5.0
->>>>>>> 4214ad9e4170cec8e41d2f615a46f2abb4d4d9ca
-torchaudio>=2.0.0
+gradio==6.3.0
+torch==2.9.1
+torchaudio==2.9.1
 openai-whisper>=20230314
 
 # 视频处理
@@ -30,14 +25,13 @@ tqdm>=4.60.0
 
 # 系统工具
 pathlib2>=2.3.7
-argparse~=1.4.0
+argparse
 
 # 日志和配置
 pyyaml>=6.0
 
-# 可选：GPU加速（如果使用NVIDIA GPU）
-# torch-audio  # 通常与torch一起安装
-# torchaudio-index  # 用于音频索引加速
+requests==2.32.5
+googletrans==4.0.2
 
 # 开发和测试工具（可选）
 # pytest>=7.0.0

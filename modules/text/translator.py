@@ -71,13 +71,6 @@ class TextTranslator:
                 self.default_method = "googletrans"
             except Exception as e:
                 raise RuntimeError(f"初始化 Google 翻译失败: {e}")
-
-        self._loop = asyncio.new_event_loop()
-        self._loop_thread = threading.Thread(
-            target=self._loop.run_forever,
-            daemon=True
-        )
-        self._loop_thread.start()
     
     def detect_language(self, text: str) -> str:
         """

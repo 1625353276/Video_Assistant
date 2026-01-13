@@ -37,15 +37,29 @@ try:
     from nltk.tokenize import word_tokenize
     from nltk.corpus import stopwords
     HAS_NLTK = True
-    # 下载必要的NLTK数据
+    
+    # 设置NLTK数据路径
+    import os
+    current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    nltk_data_path = os.path.join(current_dir, 'nltk_data')
+    if os.path.exists(nltk_data_path):
+        nltk.data.path.append(nltk_data_path)
+        logger.info(f"添加NLTK数据路径: {nltk_data_path}")
+    
+    # 检查必要的数据是否存在
     try:
-        nltk.data.find('tokenizers/punkt')
+        nltk.data.find('tokenizers/punkt_tab')
     except LookupError:
-        nltk.download('punkt')
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            logger.warning("NLTK punkt数据未找到，英文分词功能将受限")
+    
     try:
         nltk.data.find('corpora/stopwords')
     except LookupError:
-        nltk.download('stopwords')
+        logger.warning("NLTK stopwords数据未找到，英文停用词功能将受限")
+        
 except ImportError:
     HAS_NLTK = False
     logger.warning("nltk未安装，英文分词功能将受限")
@@ -170,12 +184,15 @@ class BM25Retriever:
                 # 简单的中文分词：按字符分割
                 tokens = list(re.findall(r'[\u4e00-\u9fff]+', text))
         else:
-            # 英文分词
-            if HAS_NLTK:
-                tokens = word_tokenize(text.lower())
-            else:
-                # 简单的英文分词：正则表达式
-                tokens = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+            # 英文分词 - 使用简单正则表达式避免NLTK依赖
+            # 改进的英文分词：处理标点符号和特殊字符
+            text = text.lower()
+            # 将标点符号替换为空格
+            text = re.sub(r'[^\w\s]', ' ', text)
+            # 分割单词
+            tokens = text.split()
+            # 过滤掉非字母的token
+            tokens = [token for token in tokens if re.match(r'^[a-zA-Z]+$', token)]
         
         # 过滤停用词和短词
         filtered_tokens = []

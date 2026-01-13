@@ -16,11 +16,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 import whisper
 import torch
+import ssl
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+ssl._create_default_https_context = ssl._create_unverified_context
 
 class WhisperASR:
     """Whisper语音识别服务"""
