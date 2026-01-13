@@ -1,7 +1,7 @@
 # AI视频助手 - 后端依赖包
 
 # 核心框架
-torch==2.9.1
+
 torchaudio>=2.0.0
 openai-whisper>=20230314
 
