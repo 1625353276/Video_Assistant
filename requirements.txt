@@ -16,6 +16,14 @@ ffmpeg-python>=0.2.0
 numpy>=1.24.0
 pandas>=2.0.0
 
+# 文本向量和检索
+sentence-transformers>=2.2.0
+scipy>=1.10.0
+transformers>=4.41.0
+huggingface-hub>=0.20.0
+scikit-learn>=1.7.0
+tqdm>=4.60.0
+
 # 系统工具
 pathlib2>=2.3.7
 argparse~=1.4.0
