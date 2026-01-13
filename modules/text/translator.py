@@ -15,6 +15,11 @@ from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 import time
 import json
+import asyncio
+import threading
+import logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
 
 # 尝试导入翻译库
 try:
@@ -66,6 +71,13 @@ class TextTranslator:
                 self.default_method = "googletrans"
             except Exception as e:
                 raise RuntimeError(f"初始化 Google 翻译失败: {e}")
+
+        self._loop = asyncio.new_event_loop()
+        self._loop_thread = threading.Thread(
+            target=self._loop.run_forever,
+            daemon=True
+        )
+        self._loop_thread.start()
     
     def detect_language(self, text: str) -> str:
         """
@@ -216,34 +228,39 @@ class TextTranslator:
             )
         
         return translated_transcript
-    
-    def _translate_with_googletrans(self, text: str, source_lang: str, 
-                                   target_lang: str) -> TranslationResult:
-        """使用Google翻译进行翻译"""
+
+    def _translate_with_googletrans(self, text: str, source_lang: str,
+                                    target_lang: str) -> TranslationResult:
+        """使用 Google 翻译进行翻译（稳定版，避免 event loop 关闭）"""
         try:
-            # 转换语言代码
             lang_mapping = {"zh": "zh-cn", "en": "en"}
             src = lang_mapping.get(source_lang, source_lang)
             dest = lang_mapping.get(target_lang, target_lang)
-            
-            # 执行翻译
-            result = self.translator.translate(text, src=src, dest=dest)
-            
+
+            async def _do_translate():
+                return await self.translator.translate(text, src=src, dest=dest)
+
+            future = asyncio.run_coroutine_threadsafe(
+                _do_translate(),
+                self._loop
+            )
+
+            result = future.result()
+
             return TranslationResult(
                 original_text=text,
                 translated_text=result.text,
                 source_lang=source_lang,
                 target_lang=target_lang,
-                confidence=getattr(result, 'confidence', None),
+                confidence=getattr(result, "confidence", None),
                 translation_method="googletrans"
             )
-        
+
         except Exception as e:
             print(f"Google翻译失败: {e}")
-            # 回退到模拟翻译
             return self._translate_with_mock(text, source_lang, target_lang)
-    
-    def _translate_with_mock(self, text: str, source_lang: str, 
+
+    def _translate_with_mock(self, text: str, source_lang: str,
                             target_lang: str) -> TranslationResult:
         """模拟翻译（用于测试和回退）"""
         # 简单的模拟翻译逻辑
