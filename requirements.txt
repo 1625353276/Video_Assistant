@@ -18,7 +18,7 @@ pandas>=2.0.0
 
 # 系统工具
 pathlib2>=2.3.7
-argparse
+argparse~=1.4.0
 
 # 日志和配置
 pyyaml>=6.0
@@ -45,3 +45,5 @@ pyyaml>=6.0
 # 3. Whisper模型会在首次使用时自动下载
 #    - 模型大小：tiny(75MB)、base(142MB)、small(466MB)、medium(1.5GB)、large(2.9GB)
 #    - 建议使用base或small模型平衡速度和准确性
+requests~=2.32.5
+googletrans==4.0.0-rc1

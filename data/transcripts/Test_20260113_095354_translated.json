@@ -1,0 +1,1036 @@
+{
+  "audio_file": "/var/folders/7h/31514x_93g35qb8swmtfsjrc0000gn/T/ai_video_assistant/Test_extracted.wav",
+  "audio_file_name": "Test_extracted.wav",
+  "language": "en",
+  "language_probability": 0.0,
+  "text": "您的智能手机如何准确知道您所在的位置？\n答案就在你头顶上方 12,000 英里的一颗轨道卫星上，它可以记录时间\n由量子力学驱动的原子钟的节拍。\n唷，让我们分解一下。\n首先，为什么在定位时知道卫星上的时间如此重要\n大家关心的是什么？\n您的手机需要确定的第一件事是它距卫星的距离。\n每颗卫星都会不断地广播无线电信号，这些信号从太空传输到您的手机\n光速。\n您的手机记录信号到达时间并用它来计算到目的地的距离\n卫星使用简单的公式，距离等于C乘以时间。\n其中 C 是光速，时间是信号传播的时间。\n但有一个问题。\n光的速度快得令人难以置信。\n如果我们只能计算精确到秒的时间，地球上的每个位置\n更远的距离似乎与卫星的距离相同。\n因此，为了计算出几十英尺内的距离，我们需要最好的时钟\n曾经发明过。\n进入原子钟，其中一些非常精确，不会增加或减少一秒，\n即使他们跑了接下来的三亿年。\n原子钟的工作得益于量子物理学。\n所有时钟必须具有恒定的频率。\n换句话说，时钟必须执行一些重复动作来标记等效的增量\n的时间。\n正如落地钟依靠钟摆在重力作用下不断来回摆动一样，\n原子钟的滴答声是通过两个能级之间的转变来维持的\n一个原子的。\n这就是量子物理学发挥作用的地方。\n量子力学说原子携带能量，但它们不能随意携带能量\n金额。\n相反，原子能被限制在一组精确的水平。\n我们称这些为量子。\n打个简单的比方，想象一下把汽车开上高速公路。\n当你增加速度时，你通常会持续从每小时 20 英里开始\n最高时速 70 英里。\n现在，如果你有一辆量子原子汽车，你就不会以线性方式加速。\n相反，您会立即从一种速度跳跃或过渡到另一种速度。\n对于原子来说，当从一个能级跃迁到另一个能级时，量子力学\n表示能量差等于特征频率乘以\n常数。\n其中能量的变化等于普朗克常数乘以频率。\n该特征频率就是我们制作时钟所需的频率。\nGPS 卫星依靠铯和红宝石原子作为频率标准。\n以铯133为例，特征时钟频率为90亿，1.92亿，\n631千，770赫兹。\n那就是每秒 90 亿个周期。\n那是一个非常快的时钟。\n无论钟表匠多么熟练，每个钟摆都排列着机械装置和石英\n晶体谐振频率略有不同。\n然而，宇宙中的每个铯 133 原子都以完全相同的频率振荡。\n多亏了原子钟，我们才能获得精确到十亿分之一的时间读数\n一秒钟，并且非常精确地测量到该卫星的距离。\n让我们忽略这样一个事实：你几乎肯定在地球上。\n我们现在知道您与卫星的距离是固定的。\n换句话说，你位于以卫星为中心的球体表面的某个位置。\n测量你与第二颗卫星的距离，你会得到另一个重叠的球体。\n继续这样做，只需四次测量并使用爱因斯坦理论进行一点修正\n相对论。\n您可以将您的位置精确定位到空间中的一个点。\n这就是所需要的一切。\n价值数十亿美元的卫星网络、振荡铯原子、量子力学、\n相对论、智能手机和你。\n没问题。",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 10.36,
+      "text": "您的智能手机如何准确知道您所在的位置？",
+      "confidence": -0.254,
+      "no_speech_prob": 0.129,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "How does your smartphone know exactly where you are?",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 1,
+      "start": 10.36,
+      "end": 16.32,
+      "text": "答案就在你头顶上方 12,000 英里的一颗轨道卫星上，它可以记录时间",
+      "confidence": -0.254,
+      "no_speech_prob": 0.129,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "The answer lies 12，000 miles over your head，in an orbiting satellite that keeps time to",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 2,
+      "start": 16.32,
+      "end": 20.56,
+      "text": "由量子力学驱动的原子钟的节拍。",
+      "confidence": -0.254,
+      "no_speech_prob": 0.129,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "the beat of an atomic clock powered by quantum mechanics.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 3,
+      "start": 20.56,
+      "end": 24.84,
+      "text": "唷，让我们分解一下。",
+      "confidence": -0.254,
+      "no_speech_prob": 0.129,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Phew，lets break that down.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 4,
+      "start": 24.84,
+      "end": 30.24,
+      "text": "首先，为什么在定位时知道卫星上的时间如此重要",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "First of all，why is it so important to know what time it is on a satellite when location",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 5,
+      "start": 30.24,
+      "end": 32.24,
+      "text": "大家关心的是什么？",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "is what were concerned about?",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 6,
+      "start": 32.24,
+      "end": 37.76,
+      "text": "您的手机需要确定的第一件事是它距卫星的距离。",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "The first thing your phone needs to determine is how far it is from a satellite.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 7,
+      "start": 37.76,
+      "end": 43.88,
+      "text": "每颗卫星都会不断地广播无线电信号，这些信号从太空传输到您的手机",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Each satellite constantly broadcasts radio signals that travel from space to your phone at the",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 8,
+      "start": 43.88,
+      "end": 45.76,
+      "text": "光速。",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "speed of light.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 9,
+      "start": 45.76,
+      "end": 51.04,
+      "text": "您的手机记录信号到达时间并用它来计算到目的地的距离",
+      "confidence": -0.126,
+      "no_speech_prob": 0.326,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Your phone records the signal arrival time and uses it to calculate the distance to the",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 10,
+      "start": 51.04,
+      "end": 57.72,
+      "text": "卫星使用简单的公式，距离等于C乘以时间。",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "satellite using the simple formula，distance equals C times time.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 11,
+      "start": 57.72,
+      "end": 63.08,
+      "text": "其中 C 是光速，时间是信号传播的时间。",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Where C is the speed of light and time is how long the signal traveled.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 12,
+      "start": 63.08,
+      "end": 64.4,
+      "text": "但有一个问题。",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "But theres a problem.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 13,
+      "start": 64.4,
+      "end": 66.24,
+      "text": "光的速度快得令人难以置信。",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Light is incredibly fast.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 14,
+      "start": 66.24,
+      "end": 71.52,
+      "text": "如果我们只能计算精确到秒的时间，地球上的每个位置",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "If we were only able to calculate time to the nearest second，every location on Earth",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 15,
+      "start": 71.52,
+      "end": 76.36,
+      "text": "更远的距离似乎与卫星的距离相同。",
+      "confidence": -0.154,
+      "no_speech_prob": 0.009,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "and far beyond would seem to be the same distance from the satellite.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 16,
+      "start": 76.36,
+      "end": 81.92,
+      "text": "因此，为了计算出几十英尺内的距离，我们需要最好的时钟",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "So in order to calculate that distance to within a few dozen feet，we need the best clock",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 17,
+      "start": 81.92,
+      "end": 84.28,
+      "text": "曾经发明过。",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "ever invented.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 18,
+      "start": 84.28,
+      "end": 90.96,
+      "text": "进入原子钟，其中一些非常精确，不会增加或减少一秒，",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Enter atomic clocks，some of which are so precise that they would not gain or lose a second，",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 19,
+      "start": 90.96,
+      "end": 95.88,
+      "text": "即使他们跑了接下来的三亿年。",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "even if they ran for the next 300 million years.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 20,
+      "start": 95.88,
+      "end": 98.92,
+      "text": "原子钟的工作得益于量子物理学。",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Atomic clocks work because of quantum physics.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 21,
+      "start": 98.92,
+      "end": 101.84,
+      "text": "所有时钟必须具有恒定的频率。",
+      "confidence": -0.147,
+      "no_speech_prob": 0.14,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "All clocks must have a constant frequency.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 22,
+      "start": 101.84,
+      "end": 107.64,
+      "text": "换句话说，时钟必须执行一些重复动作来标记等效的增量",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "In other words，a clock must carry out some repetitive action to mark off equivalent increments",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 23,
+      "start": 107.64,
+      "end": 109.56,
+      "text": "的时间。",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "of time.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 24,
+      "start": 109.56,
+      "end": 115.84,
+      "text": "正如落地钟依靠钟摆在重力作用下不断来回摆动一样，",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Just as a grandfather clock relies on the constant swinging back and forth of a pendulum under gravity，",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 25,
+      "start": 115.84,
+      "end": 121.52,
+      "text": "原子钟的滴答声是通过两个能级之间的转变来维持的",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "the tick-tock of an atomic clock is maintained by the transition between two energy levels",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 26,
+      "start": 121.52,
+      "end": 123.04,
+      "text": "一个原子的。",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "of an atom.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 27,
+      "start": 123.04,
+      "end": 126.72,
+      "text": "这就是量子物理学发挥作用的地方。",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "This is where quantum physics comes into play.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 28,
+      "start": 126.72,
+      "end": 131.8,
+      "text": "量子力学说原子携带能量，但它们不能随意携带能量",
+      "confidence": -0.141,
+      "no_speech_prob": 0.106,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Quantum mechanics says that atoms carry energy，but they cant take on just any arbitrary",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 29,
+      "start": 131.8,
+      "end": 132.8,
+      "text": "数量。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "amount.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 30,
+      "start": 132.8,
+      "end": 138.16,
+      "text": "相反，原子能被限制在一组精确的水平。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Instead，atomic energy is constrained to a precise set of levels.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 31,
+      "start": 138.16,
+      "end": 140.36,
+      "text": "我们称这些为量子。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "We call these quanta.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 32,
+      "start": 140.36,
+      "end": 144.6,
+      "text": "打个简单的比方，想象一下把汽车开上高速公路。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "As a simple analogy，think about driving a car onto a freeway.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 33,
+      "start": 144.6,
+      "end": 150.04,
+      "text": "当你增加速度时，你通常会持续从每小时 20 英里开始",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "As you increase your speed，you would normally continuously go from，say，20 miles per hour",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 34,
+      "start": 150.04,
+      "end": 152.24,
+      "text": "最高时速 70 英里。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "up to 70 miles per hour.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 35,
+      "start": 152.24,
+      "end": 157.76,
+      "text": "现在，如果你有一辆量子原子汽车，你就不会以线性方式加速。",
+      "confidence": -0.16,
+      "no_speech_prob": 0.016,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Now if you had a quantum atomic car，you wouldnt accelerate in a linear fashion.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 36,
+      "start": 157.76,
+      "end": 164.44,
+      "text": "相反，您会立即从一种速度跳跃或过渡到另一种速度。",
+      "confidence": -0.134,
+      "no_speech_prob": 0.01,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Instead，you would instantaneously jump or transition from one speed to the next.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 37,
+      "start": 164.44,
+      "end": 169.84,
+      "text": "对于原子来说，当从一个能级跃迁到另一个能级时，量子力学",
+      "confidence": -0.134,
+      "no_speech_prob": 0.01,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "For an atom，when a transition occurs from one energy level to another，quantum mechanics",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 38,
+      "start": 169.84,
+      "end": 176.04,
+      "text": "表示能量差等于特征频率乘以",
+      "confidence": -0.134,
+      "no_speech_prob": 0.01,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "says that the energy difference is equal to a characteristic frequency multiplied by a",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 39,
+      "start": 176.04,
+      "end": 178.04,
+      "text": "持续的。",
+      "confidence": -0.134,
+      "no_speech_prob": 0.01,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "constant.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 40,
+      "start": 178.04,
+      "end": 185.12,
+      "text": "其中能量的变化等于普朗克常数乘以频率。",
+      "confidence": -0.134,
+      "no_speech_prob": 0.01,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Where the change in energy is equal to a number called Plancks constant times the frequency.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 41,
+      "start": 185.12,
+      "end": 189.72,
+      "text": "该特征频率就是我们制作时钟所需的频率。",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "That characteristic frequency is what we need to make our clock.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 42,
+      "start": 189.72,
+      "end": 196.36,
+      "text": "GPS 卫星依靠铯和红宝石原子作为频率标准。",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "GPS satellites rely on cesium and rubidian atoms as frequency standards.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 43,
+      "start": 196.36,
+      "end": 204.16,
+      "text": "以铯133为例，特征时钟频率为90亿，1.92亿，",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "In the case of cesium 133，the characteristic clock frequency is 9 billion，192 million，",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 44,
+      "start": 204.16,
+      "end": 208.4,
+      "text": "631千，770赫兹。",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "631 thousand，770 hertz.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 45,
+      "start": 208.4,
+      "end": 211.64,
+      "text": "那就是每秒 90 亿个周期。",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Thats 9 billion cycles per second.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 46,
+      "start": 211.64,
+      "end": 213.56,
+      "text": "那是一个非常快的时钟。",
+      "confidence": -0.235,
+      "no_speech_prob": 0.074,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Thats a really fast clock.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 47,
+      "start": 213.56,
+      "end": 219.04,
+      "text": "无论钟表匠多么熟练，每个钟摆都排列着机械装置和石英",
+      "confidence": -0.189,
+      "no_speech_prob": 0.066,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "No matter how skilled a clockmaker may be，every pendulum lined up mechanism and quartz",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 48,
+      "start": 219.04,
+      "end": 222.64,
+      "text": "晶体谐振频率略有不同。",
+      "confidence": -0.189,
+      "no_speech_prob": 0.066,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "crystal resonates at a slightly different frequency.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 49,
+      "start": 222.64,
+      "end": 231.56,
+      "text": "然而，宇宙中的每个铯 133 原子都以完全相同的频率振荡。",
+      "confidence": -0.189,
+      "no_speech_prob": 0.066,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "However，every cesium 133 atom in the universe oscillates at the same exact frequency.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 50,
+      "start": 231.56,
+      "end": 236.44,
+      "text": "多亏了原子钟，我们才能获得精确到十亿分之一的时间读数",
+      "confidence": -0.189,
+      "no_speech_prob": 0.066,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "So thanks to the atomic clock，we get a time reading accurate to within 1 billionth of",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 51,
+      "start": 236.44,
+      "end": 242.8,
+      "text": "一秒钟，并且非常精确地测量到该卫星的距离。",
+      "confidence": -0.189,
+      "no_speech_prob": 0.066,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "a second，and a very precise measurement of the distance from that satellite.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 52,
+      "start": 242.8,
+      "end": 246.92,
+      "text": "让我们忽略这样一个事实：你几乎肯定在地球上。",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Lets ignore the fact that youre almost definitely on Earth.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 53,
+      "start": 246.92,
+      "end": 250.36,
+      "text": "我们现在知道您与卫星的距离是固定的。",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "We now know that youre at a fixed distance from the satellite.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 54,
+      "start": 250.36,
+      "end": 256.2,
+      "text": "换句话说，您位于以卫星为中心的球体表面的某个位置。",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "In other words，youre somewhere on the surface of a sphere centered around the satellite.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 55,
+      "start": 256.2,
+      "end": 261.28,
+      "text": "测量你与第二颗卫星的距离，你会得到另一个重叠的球体。",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Measure your distance from a second satellite and you get another overlapping sphere.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 56,
+      "start": 261.28,
+      "end": 266.28,
+      "text": "继续这样做，只需四次测量并使用爱因斯坦理论进行一点修正",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "Keep doing that，and with just four measurements and a little correction using Einsteins theory",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 57,
+      "start": 266.28,
+      "end": 267.72,
+      "text": "相对论。",
+      "confidence": -0.133,
+      "no_speech_prob": 0.103,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "of relativity.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 58,
+      "start": 267.72,
+      "end": 273.56,
+      "text": "您可以将您的位置精确定位到空间中的一个点。",
+      "confidence": -0.244,
+      "no_speech_prob": 0.083,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "You can pinpoint your location to exactly one point in space.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 59,
+      "start": 273.56,
+      "end": 274.88,
+      "text": "这就是所需要的一切。",
+      "confidence": -0.244,
+      "no_speech_prob": 0.083,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "So thats all it takes.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 60,
+      "start": 274.88,
+      "end": 281.24,
+      "text": "价值数十亿美元的卫星网络、振荡铯原子、量子力学、",
+      "confidence": -0.244,
+      "no_speech_prob": 0.083,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "A multi-billion dollar network of satellites，oscillating cesium atoms，quantum mechanics，",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 61,
+      "start": 281.24,
+      "end": 285.72,
+      "text": "相对论、智能手机和你。",
+      "confidence": -0.244,
+      "no_speech_prob": 0.083,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "relativity，a smartphone，and you.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    },
+    {
+      "id": 62,
+      "start": 285.72,
+      "end": 286.12,
+      "text": "没问题。",
+      "confidence": -0.244,
+      "no_speech_prob": 0.083,
+      "words": [],
+      "translation_metadata": {
+        "original_text": "No problem.",
+        "source_lang": "en",
+        "target_lang": "zh",
+        "confidence": null,
+        "method": "googletrans"
+      }
+    }
+  ],
+  "words": [],
+  "model_used": "base",
+  "device_used": "mps",
+  "total_duration": 286.12,
+  "avg_confidence": -0.17,
+  "speech_duration": 286.12,
+  "speech_ratio": 1.0,
+  "translation_metadata": {
+    "original_text": "How does your smartphone know exactly where you are?\nThe answer lies 12，000 miles over your head，in an orbiting satellite that keeps time to\nthe beat of an atomic clock powered by quantum mechanics.\nPhew，lets break that down.\nFirst of all，why is it so important to know what time it is on a satellite when location\nis what were concerned about?\nThe first thing your phone needs to determine is how far it is from a satellite.\nEach satellite constantly broadcasts radio signals that travel from space to your phone at the\nspeed of light.\nYour phone records the signal arrival time and uses it to calculate the distance to the\nsatellite using the simple formula，distance equals C times time.\nWhere C is the speed of light and time is how long the signal traveled.\nBut theres a problem.\nLight is incredibly fast.\nIf we were only able to calculate time to the nearest second，every location on Earth\nand far beyond would seem to be the same distance from the satellite.\nSo in order to calculate that distance to within a few dozen feet，we need the best clock\never invented.\nEnter atomic clocks，some of which are so precise that they would not gain or lose a second，\neven if they ran for the next 300 million years.\nAtomic clocks work because of quantum physics.\nAll clocks must have a constant frequency.\nIn other words，a clock must carry out some repetitive action to mark off equivalent increments\nof time.\nJust as a grandfather clock relies on the constant swinging back and forth of a pendulum under gravity，\nthe tick-tock of an atomic clock is maintained by the transition between two energy levels\nof an atom.\nThis is where quantum physics comes into play.\nQuantum mechanics says that atoms carry energy，but they cant take on just any arbitrary\namount.\nInstead，atomic energy is constrained to a precise set of levels.\nWe call these quanta.\nAs a simple analogy，think about driving a car onto a freeway.\nAs you increase your speed，you would normally continuously go from，say，20 miles per hour\nup to 70 miles per hour.\nNow if you had a quantum atomic car，you wouldnt accelerate in a linear fashion.\nInstead，you would instantaneously jump or transition from one speed to the next.\nFor an atom，when a transition occurs from one energy level to another，quantum mechanics\nsays that the energy difference is equal to a characteristic frequency multiplied by a\nconstant.\nWhere the change in energy is equal to a number called Plancks constant times the frequency.\nThat characteristic frequency is what we need to make our clock.\nGPS satellites rely on cesium and rubidian atoms as frequency standards.\nIn the case of cesium 133，the characteristic clock frequency is 9 billion，192 million，\n631 thousand，770 hertz.\nThats 9 billion cycles per second.\nThats a really fast clock.\nNo matter how skilled a clockmaker may be，every pendulum lined up mechanism and quartz\ncrystal resonates at a slightly different frequency.\nHowever，every cesium 133 atom in the universe oscillates at the same exact frequency.\nSo thanks to the atomic clock，we get a time reading accurate to within 1 billionth of\na second，and a very precise measurement of the distance from that satellite.\nLets ignore the fact that youre almost definitely on Earth.\nWe now know that youre at a fixed distance from the satellite.\nIn other words，youre somewhere on the surface of a sphere centered around the satellite.\nMeasure your distance from a second satellite and you get another overlapping sphere.\nKeep doing that，and with just four measurements and a little correction using Einsteins theory\nof relativity.\nYou can pinpoint your location to exactly one point in space.\nSo thats all it takes.\nA multi-billion dollar network of satellites，oscillating cesium atoms，quantum mechanics，\nrelativity，a smartphone，and you.\nNo problem.",
+    "source_lang": "en",
+    "target_lang": "zh",
+    "confidence": null,
+    "method": "googletrans"
+  },
+  "export_info": {
+    "export_time": "2026-01-13T09:53:54.594398",
+    "export_format": "json",
+    "export_version": "1.0"
+  }
+}
