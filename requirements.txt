@@ -1,7 +1,11 @@
 # AI视频助手 - 后端依赖包
 
 # 核心框架
+<<<<<<< HEAD
+
+=======
 torch>=2.5.0
+>>>>>>> 4214ad9e4170cec8e41d2f615a46f2abb4d4d9ca
 torchaudio>=2.0.0
 openai-whisper>=20230314
 
@@ -67,8 +71,5 @@ googletrans==4.0.2
 # 3. Whisper模型会在首次使用时自动下载
 #    - 模型大小：tiny(75MB)、base(142MB)、small(466MB)、medium(1.5GB)、large(2.9GB)
 #    - 建议使用base或small模型平衡速度和准确性
-#
-# 4. 分词库安装（推荐）
-#    - 中文内容较多：pip install jieba
-#    - 英文内容较多：pip install nltk
-#    - 混合内容：两者都安装以获得最佳效果
+requests~=2.32.5
+googletrans==4.0.0.2
