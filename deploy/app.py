@@ -526,7 +526,18 @@ class VideoAssistant:
             result = conversation_chain.chat(question)
             
             # 检查是否有检索结果
-            retrieved_count = len(result.get('retrieved_docs', []))
+            retrieved_docs = result.get('retrieved_docs', [])
+            retrieved_count = len(retrieved_docs)
+            
+            # 确保检索文档格式一致（提取字段到顶层）
+            for doc in retrieved_docs:
+                if 'document' in doc and 'text' not in doc:
+                    # 如果有document对象但没有顶层字段，提取常用字段
+                    document = doc['document']
+                    for key in ['text', 'start', 'end', 'confidence']:
+                        if key in document:
+                            doc[key] = document[key]
+            
             if retrieved_count == 0:
                 # 如果没有检索结果，可能是索引未构建
                 response = result['response']
