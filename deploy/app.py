@@ -193,7 +193,7 @@ class VideoAssistant:
         # 初始化翻译器和检索器
         if not MOCK_MODE:
             try:
-                self.translator = TextTranslator(default_method="googletrans")
+                self.translator = TextTranslator(default_method="deep-translator")
                 print("✓ 翻译器初始化成功")
             except Exception as e:
                 print(f"⚠ 翻译器初始化失败，使用模拟模式: {e}")
@@ -600,6 +600,100 @@ class VideoAssistant:
             
         except Exception as e:
             return [{"text": f"搜索失败: {str(e)}", "timestamp": 0.0, "score": 0.0, "type": "error"}]
+    
+    def build_index_background(self, video_id):
+        """后台构建向量索引"""
+        if video_id not in video_data:
+            return {"error": "视频不存在"}
+        
+        video_info = video_data[video_id]
+        
+        if not video_info.get("transcript"):
+            return {"error": "视频尚未处理完成"}
+        
+        if not self.vector_store or not self.bm25_retriever:
+            return {"error": "检索器未初始化"}
+        
+        try:
+            transcript = video_info["transcript"]
+            
+            # 准备文档数据
+            documents = []
+            for segment in transcript.get("segments", []):
+                doc = {
+                    "text": segment["text"],
+                    "start": segment["start"],
+                    "end": segment["end"],
+                    "video_id": video_id
+                }
+                documents.append(doc)
+            
+            # 构建向量索引
+            self.vector_store.clear()
+            self.vector_store.add_documents(documents, text_field="text")
+            vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
+            self.vector_store.save_index(vector_index_path)
+            
+            # 构建BM25索引
+            self.bm25_retriever.clear()
+            self.bm25_retriever.add_documents(documents, text_field="text")
+            bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
+            self.bm25_retriever.save_index(bm25_index_path)
+            
+            # 如果有混合检索器，也添加文档
+            if self.hybrid_retriever:
+                self.hybrid_retriever.clear()
+                self.hybrid_retriever.add_documents(documents, text_field="text")
+                hybrid_index_path = f"data/vectors/{video_id}_hybrid_index.pkl"
+                self.hybrid_retriever.save_indexes(vector_index_path, bm25_index_path)
+            
+            video_info["vector_index_built"] = True
+            video_info["vector_index_path"] = vector_index_path
+            video_info["bm25_index_path"] = bm25_index_path
+            video_info["index_building"] = False
+            
+            return {
+                "success": True,
+                "document_count": len(documents),
+                "vector_stats": self.vector_store.get_stats(),
+                "bm25_stats": self.bm25_retriever.get_stats(),
+                "message": f"成功构建向量索引和BM25索引，包含 {len(documents)} 个文档片段"
+            }
+        except Exception as e:
+            video_info["index_building"] = False
+            return {"error": f"构建索引失败: {str(e)}"}
+    
+    def translate_background(self, video_id, target_lang):
+        """后台翻译处理"""
+        if video_id not in video_data:
+            return {"error": "视频不存在"}
+        
+        video_info = video_data[video_id]
+        
+        if not video_info.get("transcript"):
+            return {"error": "视频尚未处理完成"}
+        
+        if not self.translator:
+            return {"error": "翻译器未初始化"}
+        
+        try:
+            transcript = video_info["transcript"]
+            translated_transcript = self.translator.translate_transcript(transcript, target_lang)
+            
+            # 保存翻译结果
+            video_info[f"translated_transcript_{target_lang}"] = translated_transcript
+            video_info["translating"] = False
+            
+            return {
+                "success": True,
+                "translated_text": translated_transcript.get("text", ""),
+                "segments": translated_transcript.get("segments", []),
+                "metadata": translated_transcript.get("translation_metadata", {}),
+                "message": "翻译完成"
+            }
+        except Exception as e:
+            video_info["translating"] = False
+            return {"error": f"翻译失败: {str(e)}"}
 
 
 # 创建全局助手实例
@@ -621,7 +715,8 @@ def create_video_qa_interface():
                 gr.JSON(visible=False),
                 gr.Textbox(visible=False),
                 gr.Row(visible=False),
-                gr.Textbox(visible=False)
+                gr.Textbox(visible=False),
+                gr.Progress(visible=False)
             )
         
         return (
@@ -630,7 +725,8 @@ def create_video_qa_interface():
             gr.JSON(value={"video_id": result["video_id"], "filename": result["filename"]}, visible=True),
             gr.Textbox(value="正在处理视频...", visible=True),
             gr.Row(visible=True),  # 显示处理日志区域
-            gr.Textbox(value=f"[{time.strftime('%H:%M:%S')}] 开始处理: {result['filename']}", visible=True)
+            gr.Textbox(value=f"[{time.strftime('%H:%M:%S')}] 开始处理: {result['filename']}", visible=True),
+            gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>处理进度: 0%</div>", visible=True)
         )
     
     # 更新处理进度
@@ -643,13 +739,15 @@ def create_video_qa_interface():
                 gr.Dropdown(visible=False), 
                 gr.Textbox(visible=False),  # 翻译结果区域
                 gr.Textbox(visible=False),
-                gr.Textbox(value="等待上传视频...", visible=True)
+                gr.Textbox(value="等待上传视频...", visible=True),
+                gr.HTML(value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待处理...</div>", visible=False)
             )
         
         video_id = video_info["video_id"]
         progress_info = assistant.get_processing_progress(video_id)
         
         log_text = "\n".join(progress_info["log_messages"])
+        progress_percent = int(progress_info["progress"] * 100)
         
         if progress_info["status"] == "completed":
             # 处理完成，更新转录和摘要显示
@@ -664,7 +762,8 @@ def create_video_qa_interface():
                 gr.Dropdown(visible=True),  # 显示语言选择
                 gr.Textbox(visible=True),  # 显示翻译结果区域
                 gr.Textbox(value=summary, visible=True),
-                gr.Textbox(value="处理完成！", visible=True)
+                gr.Textbox(value="✅ 处理完成！现在可以进行翻译和构建检索索引", visible=True),
+                gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 处理完成！</div>", visible=True)
             )
         
         return (
@@ -674,7 +773,8 @@ def create_video_qa_interface():
             gr.Dropdown(visible=False),
             gr.Textbox(visible=False),  # 翻译结果区域
             gr.Textbox(visible=False),
-            gr.Textbox(value=progress_info["current_step"], visible=True)
+            gr.Textbox(value=f"⏳ {progress_info['current_step']} ({progress_percent}%)", visible=True),
+            gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>⏳ {progress_info['current_step']} ({progress_percent}%)</div>", visible=True)
         )
     
     # 处理问答
@@ -717,28 +817,54 @@ def create_video_qa_interface():
     # 处理翻译
     def handle_translate(video_info, target_lang):
         if not video_info or "video_id" not in video_info:
-            return "请先上传并处理视频", gr.Textbox(visible=False)
+            return "请先上传并处理视频", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         video_id = video_info["video_id"]
-        result = assistant.translate_transcript(video_id, target_lang)
         
-        if "error" in result:
-            return result["error"], gr.Textbox(visible=False)
+        # 检查视频是否存在
+        if video_id not in video_data:
+            return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False)
         
-        return "翻译成功", gr.Textbox(value=result["translated_text"], visible=True)
+        # 检查转录是否完成
+        if not video_data[video_id].get("transcript"):
+            return "视频尚未转录完成，无法翻译", gr.Textbox(visible=False), gr.HTML(visible=False)
+        
+        # 实际执行翻译
+        try:
+            result = assistant.translate_transcript(video_id, target_lang)
+            
+            if "error" in result:
+                return result["error"], gr.Textbox(visible=False), gr.HTML(visible=False)
+            
+            # 翻译成功
+            translated_text = result.get("translated_text", "")
+            return (
+                "✅ 翻译完成", 
+                gr.Textbox(value=translated_text, visible=True),
+                gr.HTML(value="<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 翻译完成</div>", visible=True)
+            )
+            
+        except Exception as e:
+            return f"翻译失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 构建向量索引
     def handle_build_index(video_selector):
         if not video_selector:
-            return "请先选择视频"
+            return "请先选择视频", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         video_id = video_selector.split(":")[0].strip()
-        result = assistant.build_vector_index(video_id)
         
-        if "error" in result:
-            return result["error"]
+        # 检查视频是否存在
+        if video_id not in video_data:
+            return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False)
         
-        return result["message"]
+        # 检查转录是否完成
+        if not video_data[video_id].get("transcript"):
+            return "视频尚未转录完成，无法构建索引", gr.Textbox(visible=False), gr.HTML(visible=False)
+        
+        # 返回开始构建的状态
+        video_data[video_id]["index_building"] = True
+        return "正在构建检索索引，请稍候...", gr.Textbox(value="⏳ 正在构建向量索引和BM25索引...", visible=True), gr.HTML(value="<div style='width:100%; background-color:#fff3cd; border-radius:5px; padding:5px; text-align:center;'>⏳ 正在构建索引...</div>", visible=True)
     
     # 开始新对话
     def start_new_chat():
@@ -759,7 +885,7 @@ def create_video_qa_interface():
             # 视频上传和管理标签页
             with gr.TabItem("视频管理"):
                 upload_status = gr.Textbox(label="上传状态", visible=False)
-                
+
                 with gr.Row():
                     with gr.Column(scale=1):
                         video_input = gr.File(
@@ -768,22 +894,25 @@ def create_video_qa_interface():
                             type="filepath"
                         )
                         upload_btn = gr.Button("上传并处理视频", variant="primary")
-                        
-                    with gr.Column(scale=2):
-                        video_player = gr.Video(label="视频预览", visible=False)
-                        video_info = gr.JSON(label="视频信息", visible=False)
-                        processing_status = gr.Textbox(label="处理状态", visible=False)
-                
-                # 处理日志和进度
-                with gr.Row(visible=False) as processing_row:
-                    with gr.Column():
+
+                        # 处理日志和进度 - 移动到上传列
+                        progress_html = gr.HTML(
+                            value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待处理...</div>",
+                            visible=False
+                        )
                         processing_log = gr.Textbox(
                             label="处理日志",
                             lines=10,
                             interactive=False,
-                            max_lines=15,
-                            show_label=True
+                            max_lines=25,
+                            show_label=True,
+                            visible=False
                         )
+
+                    with gr.Column(scale=2):
+                        video_player = gr.Video(label="视频预览", visible=False)
+                        video_info = gr.JSON(label="视频信息", visible=False)
+                        processing_status = gr.Textbox(label="处理状态", visible=False)
                 
                 # 视频内容展示
                 with gr.Accordion("视频内容分析", open=False):
@@ -811,6 +940,12 @@ def create_video_qa_interface():
                         visible=False
                     )
                     
+                    # 翻译进度
+                    translate_progress_html = gr.HTML(
+                        value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待翻译...</div>",
+                        visible=False
+                    )
+                    
                     summary_display = gr.Textbox(
                         label="视频摘要",
                         lines=5,
@@ -835,6 +970,10 @@ def create_video_qa_interface():
                             # 索引构建
                             build_index_btn = gr.Button("构建检索索引", variant="secondary", size="sm")
                             index_status = gr.Textbox(label="索引状态", interactive=False, lines=2)
+                            index_progress_html = gr.HTML(
+                        value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待构建索引...</div>",
+                        visible=False
+                    )
                             
                             # 搜索类型选择
                             search_type = gr.Radio(
@@ -891,7 +1030,7 @@ def create_video_qa_interface():
         upload_btn.click(
             handle_upload,
             inputs=[video_input],
-            outputs=[upload_status, video_player, video_info, processing_status, processing_row, processing_log]
+            outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html]
         )
         
         # 定时更新处理进度 - 使用Timer组件替代
@@ -899,7 +1038,34 @@ def create_video_qa_interface():
         progress_timer.tick(
             update_progress,
             inputs=[video_info],
-            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, summary_display, processing_status]
+            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, summary_display, processing_status, progress_html]
+        )
+        
+        # 定时检查翻译和索引构建进度
+        def check_background_tasks(video_info):
+            if not video_info or "video_id" not in video_info:
+                return gr.HTML(visible=False), gr.HTML(visible=False)
+            
+            video_id = video_info["video_id"]
+            
+            # 检查翻译进度
+            if video_id in video_data and video_data[video_id].get("translating", False):
+                # 模拟翻译进度
+                return gr.HTML(value="<div style='width:100%; background-color:#fff3cd; border-radius:5px; padding:5px; text-align:center;'>⏳ 正在翻译...</div>", visible=True), gr.HTML(visible=False)
+            
+            # 检查索引构建进度
+            if video_id in video_data and video_data[video_id].get("index_building", False):
+                # 模拟索引构建进度
+                return gr.HTML(visible=False), gr.HTML(value="<div style='width:100%; background-color:#fff3cd; border-radius:5px; padding:5px; text-align:center;'>⏳ 正在构建索引...</div>", visible=True)
+            
+            return gr.HTML(visible=False), gr.HTML(visible=False)
+        
+        # 添加后台任务检查定时器
+        background_timer = gr.Timer(3)  # 每3秒检查一次
+        background_timer.tick(
+            check_background_tasks,
+            inputs=[video_info],
+            outputs=[translate_progress_html, index_progress_html]
         )
         
         # 问答事件
@@ -926,14 +1092,14 @@ def create_video_qa_interface():
         translate_btn.click(
             handle_translate,
             inputs=[video_info, target_lang],
-            outputs=[processing_status, translated_display]
+            outputs=[processing_status, translated_display, translate_progress_html]
         )
         
         # 构建向量索引事件
         build_index_btn.click(
             handle_build_index,
             inputs=[video_selector],
-            outputs=[index_status]
+            outputs=[index_status, index_status, index_progress_html]
         )
         
         # 新对话事件
@@ -962,7 +1128,7 @@ if __name__ == "__main__":
     demo = create_video_qa_interface()
     demo.launch(
         server_name="localhost",
-        server_port=7860,
+        server_port=None,
         share=False,
         debug=True,
         theme=gr.themes.Soft()

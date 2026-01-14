@@ -63,8 +63,10 @@ class WhisperASR:
         # 自动检测设备
         if torch.cuda.is_available():
             return "cuda"
-        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            return "mps"  # Apple Silicon GPU
+        # 注意：Apple Silicon的MPS后端与Whisper模型存在兼容性问题
+        # 临时解决方案：强制使用CPU而不是MPS
+        # elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        #     return "mps"  # Apple Silicon GPU
         else:
             return "cpu"
     
