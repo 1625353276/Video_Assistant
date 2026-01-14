@@ -60,6 +60,11 @@ class ConversationChain:
         self.current_turn_id = 0
         self.session_id = self._generate_session_id()
         
+        # 完整转录内容存储
+        self.full_transcript = None  # 存储完整转录数据
+        self.full_context_sent = False  # 标记完整内容是否已发送
+        self._full_context_cache = None  # 缓存完整上下文
+        
         # 对话配置
         self.max_history_length = settings.get_model_config('qa_system', 'history_length', 10)
         self.enable_compression = settings.get_model_config('qa_system', 'enable_compression', True)
@@ -234,7 +239,7 @@ class ConversationChain:
     
     def _build_messages(self, query: str, context: str) -> List[Dict[str, str]]:
         """
-        构建完整的消息列表，包含系统提示、视频内容、对话历史和当前问题
+        构建完整的消息列表，每次都发送完整视频内容，不包含历史对话
         
         Args:
             query: 用户查询
@@ -249,22 +254,66 @@ class ConversationChain:
         system_prompt = self._build_system_prompt()
         messages.append({"role": "system", "content": system_prompt})
         
-        # 2. 视频内容背景 - 只有在有上下文时才添加
-        if context and context.strip():
-            video_context_prompt = f"以下是与问题相关的视频内容：\n\n{context}"
-            messages.append({"role": "system", "content": video_context_prompt})
+        # 2. 完整视频内容 - 如果有完整转录内容则发送
+        if hasattr(self, 'full_transcript') and self.full_transcript:
+            full_content = self._build_full_context()
+            if full_content:
+                messages.append({"role": "system", "content": f"以下是视频的完整转录内容：\n\n{full_content}"})
+                self.logger.info(f"已发送完整视频内容，长度: {len(full_content)} 字符")
+        else:
+            self.logger.warning("没有完整视频内容可发送")
         
-        # 3. 历史对话 - 最近几轮对话
-        history_messages = self._build_history_messages()
-        messages.extend(history_messages)
+        # 3. 检索到的相关内容 - 如果有检索结果则发送
+        if context and context.strip():
+            messages.append({"role": "system", "content": f"以下是与问题相关的视频片段：\n\n{context}"})
         
         # 4. 当前问题
         messages.append({"role": "user", "content": query})
         
-        # 5. 管理token限制
-        messages = self._manage_token_limit(messages)
-        
         return messages
+    
+    def _build_full_context(self) -> str:
+        """构建完整的视频内容上下文"""
+        # 防御性检查：确保full_transcript属性存在
+        if not hasattr(self, 'full_transcript') or not self.full_transcript:
+            return ""
+        
+        # 如果有缓存，直接返回
+        if self._full_context_cache:
+            return self._full_context_cache
+        
+        # 构建完整内容（不包含时间戳）
+        full_content = []
+        for segment in self.full_transcript:
+            text = segment.get('text', '').strip()
+            
+            if text:
+                # 直接添加文本内容，不包含时间戳
+                full_content.append(text)
+        
+        # 合并内容并缓存
+        result = "\n".join(full_content)
+        self._full_context_cache = result
+        return result
+    
+    def _format_timestamp(self, seconds: float) -> str:
+        """格式化时间戳为 HH:MM:SS 格式"""
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        secs = int(seconds % 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+    
+    def set_full_transcript(self, transcript: List[Dict[str, Any]]) -> None:
+        """
+        设置完整的转录内容
+        
+        Args:
+            transcript: 转录文本列表，每个元素包含 text, start, end 等字段
+        """
+        self.full_transcript = transcript
+        # 清除缓存，下次使用时重新构建
+        self._full_context_cache = None
+        self.logger.info(f"已设置完整转录内容，共 {len(transcript)} 个片段")
     
     def _build_system_prompt(self) -> str:
         """构建系统提示"""
@@ -275,7 +324,12 @@ class ConversationChain:
 2. 如果视频中没有相关信息，请明确说明
 3. 回答要准确、简洁、有条理
 4. 可以引用视频中的具体内容来支持你的回答
-5. 保持友好和专业的语气"""
+5. 保持友好和专业的语气
+
+特别注意：
+- 如果用户的问题涉及特定时间点（如"第几秒"、"开头"、"结尾"等），请参考带时间戳的内容片段
+- 带时间戳的内容（格式如 [00:00:00 - 00:00:05]）表示视频中的具体时间段，用户可能希望了解这些时间点的内容
+- 在回答时间相关问题时，可以提及具体的时间戳，帮助用户定位视频位置"""
     
     def _build_history_messages(self) -> List[Dict[str, str]]:
         """构建历史对话消息"""
@@ -612,8 +666,7 @@ class ConversationChain:
             response = self._generate_response(query, context)
             current_turn.response = response
             
-            # 更新对话历史
-            self._update_history(current_turn)
+            # 不保存历史记录，每轮都是新的对话
             
             # 构建返回结果
             result = {
@@ -625,7 +678,7 @@ class ConversationChain:
                 'context': context,
                 'timestamp': current_turn.timestamp.isoformat(),
                 'metadata': {
-                    'total_turns': len(self.conversation_history),
+                    'total_turns': 0,  # 不保存历史记录
                     'retrieved_count': len(retrieved_docs),
                     'context_length': len(context)
                 }

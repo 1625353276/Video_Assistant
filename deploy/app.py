@@ -403,7 +403,7 @@ class VideoAssistant:
                     video_info["transcript"] = transcript_result
                     
                     # 保存转录结果
-                    transcript_path = Path(f"data/transcripts/{video_id}.json")
+                    transcript_path = Path(f"data/transcripts/{video_id}_transcript.json")
                     self.file_manager.save_transcript_json(transcript_result, transcript_path)
                     
                     status["log_messages"].append(f"[{time.strftime('%H:%M:%S')}] 语音转文本完成")
@@ -488,13 +488,55 @@ class VideoAssistant:
                 )
                 
                 # 创建带检索器的对话链
-                return ConversationChain(retriever=hybrid_retriever)
+                conversation_chain = ConversationChain(retriever=hybrid_retriever)
+                
+                # 设置转录内容
+                transcript_file = f"data/transcripts/{video_id}_transcript.json"
+                if os.path.exists(transcript_file):
+                    import json
+                    with open(transcript_file, 'r', encoding='utf-8') as f:
+                        transcript_data = json.load(f)
+                        if 'segments' in transcript_data:
+                            conversation_chain.set_full_transcript(transcript_data['segments'])
+                            print(f"已为视频 {video_id} 设置转录内容，共 {len(transcript_data['segments'])} 个片段")
+                            # 调试：验证转录内容是否设置成功
+                            if hasattr(conversation_chain, 'full_transcript') and conversation_chain.full_transcript:
+                                print(f"转录内容设置成功，第一段内容: {conversation_chain.full_transcript[0].get('text', '')[:50]}...")
+                            else:
+                                print("警告：转录内容设置失败！")
+                        else:
+                            print(f"警告：转录文件中没有segments字段，文件内容: {list(transcript_data.keys())}")
+                else:
+                    print(f"警告：转录文件不存在: {transcript_file}")
+                
+                return conversation_chain
             except Exception as e:
                 print(f"创建对话链失败，使用基本对话链: {e}")
                 # 即使检索器创建失败，也返回基本对话链
                 try:
                     from modules.qa.conversation_chain import ConversationChain
-                    return ConversationChain()
+                    conversation_chain = ConversationChain()
+                    
+                    # 设置转录内容
+                    transcript_file = f"data/transcripts/{video_id}_transcript.json"
+                    if os.path.exists(transcript_file):
+                        import json
+                        with open(transcript_file, 'r', encoding='utf-8') as f:
+                            transcript_data = json.load(f)
+                            if 'segments' in transcript_data:
+                                conversation_chain.set_full_transcript(transcript_data['segments'])
+                                print(f"已为视频 {video_id} 设置转录内容，共 {len(transcript_data['segments'])} 个片段")
+                                # 调试：验证转录内容是否设置成功
+                                if hasattr(conversation_chain, 'full_transcript') and conversation_chain.full_transcript:
+                                    print(f"转录内容设置成功，第一段内容: {conversation_chain.full_transcript[0].get('text', '')[:50]}...")
+                                else:
+                                    print("警告：转录内容设置失败！")
+                            else:
+                                print(f"警告：转录文件中没有segments字段，文件内容: {list(transcript_data.keys())}")
+                    else:
+                        print(f"警告：转录文件不存在: {transcript_file}")
+                    
+                    return conversation_chain
                 except Exception as e2:
                     print(f"创建基本对话链也失败: {e2}")
                     return None
@@ -520,6 +562,12 @@ class VideoAssistant:
         
         if conversation_chain is None:
             return "对话链初始化失败，请重启应用或联系管理员", chat_history
+        
+        # 调试：检查转录内容是否存在
+        if hasattr(conversation_chain, 'full_transcript') and conversation_chain.full_transcript:
+            print(f"对话中：视频 {video_id} 有转录内容，共 {len(conversation_chain.full_transcript)} 个片段")
+        else:
+            print(f"对话中：视频 {video_id} 没有转录内容！")
         
         try:
             # 调用对话链

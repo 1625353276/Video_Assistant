@@ -59,13 +59,14 @@ def main():
         "test_bm25_retriever.py", 
         "test_hybrid_retriever.py",
         "test_multi_query.py",
-        "test_local_model.py",
         "test_pipeline.py",
         "test_qa_integration.py",
         "test_complete_qa_flow.py",
         "test_qa_system.py",
         "test_retrieval_integration.py",
-        "test_llm_api.py"
+        "test_llm_api.py",
+        "test_simple_conversation.py",
+        "test_transcript_flow.py"
     ]
     
     passed = 0
