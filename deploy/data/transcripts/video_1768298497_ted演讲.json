@@ -1,0 +1,435 @@
+{
+  "audio_file": "/var/folders/ng/spjvy4210gggqql_zw9l8gk00000gn/T/ai_video_assistant/video_1768298497_ted演讲_extracted.wav",
+  "audio_file_name": "video_1768298497_ted演讲_extracted.wav",
+  "language": "en",
+  "language_probability": 0.0,
+  "text": "The Ancient Greeks and Romans The Ancient Greeks and Romans The Ancient Greeks and Romans Way before the first selfie, the ancient Greeks and Romans had a myth about someone a little too obsessed with his own image. In one telling, Narcissus was a handsome guy wandering the world in search of someone to love. After rejecting an imp named Echo, he caught a glimpse of his own reflection in a river and fell in love with it. Unable to tear himself away, Narcissus drowned. A flower marked the spot where he died, and we call that flower the Narcissus. The myth captures the basic idea of Narcissism, elevated and sometimes detrimental self-envolvement. But it's not just a personality type that shows up in advice columns. It's actually a set of traits classified and studied by psychologists. The psychological definition of Narcissism is an inflated grandiose self-image. To varying degrees, Narcissists think they're better looking, smarter and more important than other people, and that they deserve special treatment. Psychologists recognize two forms of Narcissism as a personality trait, grandiose and vulnerable Narcissism. There's also Narcissistic personality disorder, a more extreme form, which will return to shortly. grandiose Narcissism is the most familiar kind, characterized by extraversion, dominance and attention seeking. grandiose Narcissists pursue attention and power, sometimes as politicians, celebrities, or cultural leaders. Of course, not everyone who pursues these positions of power is Narcissistic. Many do it for very positive reasons, like reaching their full potential or helping make people's lives better. But Narcissistic individuals seek power for the status and attention that goes with it. Meanwhile, vulnerable Narcissists can be quiet and reserved. They have a strong sense of entitlement, but are easily threatened or slited. In either case, the dark side of Narcissism shows up over the long term. Narcissists tend to act selfishly, so Narcissistic leaders may make risky or unethical decisions, and Narcissistic partners may be dishonest or unfaithful. When their rosy view of themselves is challenged, they can become resentful and aggressive. It's like a disease where the sufferers feel pretty good, but the people around them suffer. Taken to the extreme, this behavior is classified as a psychological disorder called Narcissistic Personality Disorder. It affects 1-2% of the population, more commonly men. It is also a diagnosis reserved for adults. Young people, especially children, can be very self-centered, but this might just be a normal part of development. The 5th edition of the American Psychiatric Association's Diagnostic and Statistical Manual describes several traits associated with Narcissistic Personality Disorder. They include a grandiose view of oneself, problems with empathy, a sense of entitlement, and a need for admiration or attention. What makes these traits a true personality disorder is that they take over people's lives and cause significant problems. Imagine that instead of caring for your spouse or children, you use them as a source of attention or admiration. Or imagine that instead of seeking constructive feedback about your performance, you instead told everyone who tried to help you that they were wrong. So what causes Narcissism? Twin studies show a strong genetic component, although we don't know which genes are involved, but environment matters too. Parents who put their child on a pedestal can foster grandiose Narcissism, and cold controlling parents can contribute to vulnerable Narcissism. Narcissism also seems to be higher in cultures that value individuality and self-promotion. In the United States, for example, Narcissism as a personality trait has been rising since the 1970s, when the communal focus of the 60s gave way to the self-esteem movement and arise in materialism. More recently, social media has multiplied the possibilities for self-promotion, though it's worth noting that there's no clear evidence that social media causes Narcissism. Rather, it provides Narcissists a means to seek social status and attention. So can Narcissists improve on those negative traits? Yes. Anything that promotes honest reflection on their own behavior and caring for others, like psychotherapy or practicing compassion towards others, can be helpful. The difficulty is, it can be challenging for people with narcissistic personality disorder to keep working at self-betterment. For a narcissist, self-reflection is hard from an unflattering angle.",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.0,
+      "end": 2.0,
+      "text": "The Ancient Greeks and Romans",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 1,
+      "start": 2.0,
+      "end": 4.0,
+      "text": "The Ancient Greeks and Romans",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 2,
+      "start": 4.0,
+      "end": 6.0,
+      "text": "The Ancient Greeks and Romans",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 3,
+      "start": 6.0,
+      "end": 14.0,
+      "text": "Way before the first selfie, the ancient Greeks and Romans had a myth about someone a little too obsessed with his own image.",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 4,
+      "start": 14.0,
+      "end": 20.0,
+      "text": "In one telling, Narcissus was a handsome guy wandering the world in search of someone to love.",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 5,
+      "start": 20.0,
+      "end": 28.0,
+      "text": "After rejecting an imp named Echo, he caught a glimpse of his own reflection in a river and fell in love with it.",
+      "confidence": -0.249,
+      "no_speech_prob": 0.173,
+      "words": []
+    },
+    {
+      "id": 6,
+      "start": 28.0,
+      "end": 36.0,
+      "text": "Unable to tear himself away, Narcissus drowned. A flower marked the spot where he died, and we call that flower the Narcissus.",
+      "confidence": -0.087,
+      "no_speech_prob": 0.008,
+      "words": []
+    },
+    {
+      "id": 7,
+      "start": 36.0,
+      "end": 44.0,
+      "text": "The myth captures the basic idea of Narcissism, elevated and sometimes detrimental self-envolvement.",
+      "confidence": -0.087,
+      "no_speech_prob": 0.008,
+      "words": []
+    },
+    {
+      "id": 8,
+      "start": 44.0,
+      "end": 48.0,
+      "text": "But it's not just a personality type that shows up in advice columns.",
+      "confidence": -0.087,
+      "no_speech_prob": 0.008,
+      "words": []
+    },
+    {
+      "id": 9,
+      "start": 48.0,
+      "end": 52.0,
+      "text": "It's actually a set of traits classified and studied by psychologists.",
+      "confidence": -0.087,
+      "no_speech_prob": 0.008,
+      "words": []
+    },
+    {
+      "id": 10,
+      "start": 52.0,
+      "end": 58.0,
+      "text": "The psychological definition of Narcissism is an inflated grandiose self-image.",
+      "confidence": -0.085,
+      "no_speech_prob": 0.049,
+      "words": []
+    },
+    {
+      "id": 11,
+      "start": 58.0,
+      "end": 66.0,
+      "text": "To varying degrees, Narcissists think they're better looking, smarter and more important than other people, and that they deserve special treatment.",
+      "confidence": -0.085,
+      "no_speech_prob": 0.049,
+      "words": []
+    },
+    {
+      "id": 12,
+      "start": 66.0,
+      "end": 74.0,
+      "text": "Psychologists recognize two forms of Narcissism as a personality trait, grandiose and vulnerable Narcissism.",
+      "confidence": -0.085,
+      "no_speech_prob": 0.049,
+      "words": []
+    },
+    {
+      "id": 13,
+      "start": 74.0,
+      "end": 82.0,
+      "text": "There's also Narcissistic personality disorder, a more extreme form, which will return to shortly.",
+      "confidence": -0.112,
+      "no_speech_prob": 0.683,
+      "words": []
+    },
+    {
+      "id": 14,
+      "start": 82.0,
+      "end": 90.0,
+      "text": "grandiose Narcissism is the most familiar kind, characterized by extraversion, dominance and attention seeking.",
+      "confidence": -0.112,
+      "no_speech_prob": 0.683,
+      "words": []
+    },
+    {
+      "id": 15,
+      "start": 90.0,
+      "end": 98.0,
+      "text": "grandiose Narcissists pursue attention and power, sometimes as politicians, celebrities, or cultural leaders.",
+      "confidence": -0.112,
+      "no_speech_prob": 0.683,
+      "words": []
+    },
+    {
+      "id": 16,
+      "start": 98.0,
+      "end": 102.0,
+      "text": "Of course, not everyone who pursues these positions of power is Narcissistic.",
+      "confidence": -0.112,
+      "no_speech_prob": 0.683,
+      "words": []
+    },
+    {
+      "id": 17,
+      "start": 102.0,
+      "end": 108.0,
+      "text": "Many do it for very positive reasons, like reaching their full potential or helping make people's lives better.",
+      "confidence": -0.053,
+      "no_speech_prob": 0.123,
+      "words": []
+    },
+    {
+      "id": 18,
+      "start": 108.0,
+      "end": 114.0,
+      "text": "But Narcissistic individuals seek power for the status and attention that goes with it.",
+      "confidence": -0.053,
+      "no_speech_prob": 0.123,
+      "words": []
+    },
+    {
+      "id": 19,
+      "start": 114.0,
+      "end": 118.0,
+      "text": "Meanwhile, vulnerable Narcissists can be quiet and reserved.",
+      "confidence": -0.053,
+      "no_speech_prob": 0.123,
+      "words": []
+    },
+    {
+      "id": 20,
+      "start": 118.0,
+      "end": 122.0,
+      "text": "They have a strong sense of entitlement, but are easily threatened or slited.",
+      "confidence": -0.053,
+      "no_speech_prob": 0.123,
+      "words": []
+    },
+    {
+      "id": 21,
+      "start": 122.0,
+      "end": 127.0,
+      "text": "In either case, the dark side of Narcissism shows up over the long term.",
+      "confidence": -0.053,
+      "no_speech_prob": 0.123,
+      "words": []
+    },
+    {
+      "id": 22,
+      "start": 127.0,
+      "end": 139.0,
+      "text": "Narcissists tend to act selfishly, so Narcissistic leaders may make risky or unethical decisions, and Narcissistic partners may be dishonest or unfaithful.",
+      "confidence": -0.044,
+      "no_speech_prob": 0.01,
+      "words": []
+    },
+    {
+      "id": 23,
+      "start": 139.0,
+      "end": 144.0,
+      "text": "When their rosy view of themselves is challenged, they can become resentful and aggressive.",
+      "confidence": -0.044,
+      "no_speech_prob": 0.01,
+      "words": []
+    },
+    {
+      "id": 24,
+      "start": 144.0,
+      "end": 149.0,
+      "text": "It's like a disease where the sufferers feel pretty good, but the people around them suffer.",
+      "confidence": -0.044,
+      "no_speech_prob": 0.01,
+      "words": []
+    },
+    {
+      "id": 25,
+      "start": 149.0,
+      "end": 157.0,
+      "text": "Taken to the extreme, this behavior is classified as a psychological disorder called Narcissistic Personality Disorder.",
+      "confidence": -0.069,
+      "no_speech_prob": 0.101,
+      "words": []
+    },
+    {
+      "id": 26,
+      "start": 157.0,
+      "end": 161.0,
+      "text": "It affects 1-2% of the population, more commonly men.",
+      "confidence": -0.069,
+      "no_speech_prob": 0.101,
+      "words": []
+    },
+    {
+      "id": 27,
+      "start": 161.0,
+      "end": 165.0,
+      "text": "It is also a diagnosis reserved for adults.",
+      "confidence": -0.069,
+      "no_speech_prob": 0.101,
+      "words": []
+    },
+    {
+      "id": 28,
+      "start": 165.0,
+      "end": 171.0,
+      "text": "Young people, especially children, can be very self-centered, but this might just be a normal part of development.",
+      "confidence": -0.069,
+      "no_speech_prob": 0.101,
+      "words": []
+    },
+    {
+      "id": 29,
+      "start": 171.0,
+      "end": 182.0,
+      "text": "The 5th edition of the American Psychiatric Association's Diagnostic and Statistical Manual describes several traits associated with Narcissistic Personality Disorder.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.139,
+      "words": []
+    },
+    {
+      "id": 30,
+      "start": 182.0,
+      "end": 190.0,
+      "text": "They include a grandiose view of oneself, problems with empathy, a sense of entitlement, and a need for admiration or attention.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.139,
+      "words": []
+    },
+    {
+      "id": 31,
+      "start": 190.0,
+      "end": 197.0,
+      "text": "What makes these traits a true personality disorder is that they take over people's lives and cause significant problems.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.139,
+      "words": []
+    },
+    {
+      "id": 32,
+      "start": 198.0,
+      "end": 204.0,
+      "text": "Imagine that instead of caring for your spouse or children, you use them as a source of attention or admiration.",
+      "confidence": -0.051,
+      "no_speech_prob": 0.765,
+      "words": []
+    },
+    {
+      "id": 33,
+      "start": 204.0,
+      "end": 212.0,
+      "text": "Or imagine that instead of seeking constructive feedback about your performance, you instead told everyone who tried to help you that they were wrong.",
+      "confidence": -0.051,
+      "no_speech_prob": 0.765,
+      "words": []
+    },
+    {
+      "id": 34,
+      "start": 212.0,
+      "end": 215.0,
+      "text": "So what causes Narcissism?",
+      "confidence": -0.051,
+      "no_speech_prob": 0.765,
+      "words": []
+    },
+    {
+      "id": 35,
+      "start": 215.0,
+      "end": 223.0,
+      "text": "Twin studies show a strong genetic component, although we don't know which genes are involved, but environment matters too.",
+      "confidence": -0.051,
+      "no_speech_prob": 0.765,
+      "words": []
+    },
+    {
+      "id": 36,
+      "start": 223.0,
+      "end": 233.0,
+      "text": "Parents who put their child on a pedestal can foster grandiose Narcissism, and cold controlling parents can contribute to vulnerable Narcissism.",
+      "confidence": -0.057,
+      "no_speech_prob": 0.016,
+      "words": []
+    },
+    {
+      "id": 37,
+      "start": 233.0,
+      "end": 239.0,
+      "text": "Narcissism also seems to be higher in cultures that value individuality and self-promotion.",
+      "confidence": -0.057,
+      "no_speech_prob": 0.016,
+      "words": []
+    },
+    {
+      "id": 38,
+      "start": 239.0,
+      "end": 252.0,
+      "text": "In the United States, for example, Narcissism as a personality trait has been rising since the 1970s, when the communal focus of the 60s gave way to the self-esteem movement and arise in materialism.",
+      "confidence": -0.057,
+      "no_speech_prob": 0.016,
+      "words": []
+    },
+    {
+      "id": 39,
+      "start": 252.0,
+      "end": 262.0,
+      "text": "More recently, social media has multiplied the possibilities for self-promotion, though it's worth noting that there's no clear evidence that social media causes Narcissism.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.007,
+      "words": []
+    },
+    {
+      "id": 40,
+      "start": 262.0,
+      "end": 267.0,
+      "text": "Rather, it provides Narcissists a means to seek social status and attention.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.007,
+      "words": []
+    },
+    {
+      "id": 41,
+      "start": 267.0,
+      "end": 271.0,
+      "text": "So can Narcissists improve on those negative traits?",
+      "confidence": -0.047,
+      "no_speech_prob": 0.007,
+      "words": []
+    },
+    {
+      "id": 42,
+      "start": 271.0,
+      "end": 272.0,
+      "text": "Yes.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.007,
+      "words": []
+    },
+    {
+      "id": 43,
+      "start": 272.0,
+      "end": 281.0,
+      "text": "Anything that promotes honest reflection on their own behavior and caring for others, like psychotherapy or practicing compassion towards others, can be helpful.",
+      "confidence": -0.047,
+      "no_speech_prob": 0.007,
+      "words": []
+    },
+    {
+      "id": 44,
+      "start": 282.0,
+      "end": 289.0,
+      "text": "The difficulty is, it can be challenging for people with narcissistic personality disorder to keep working at self-betterment.",
+      "confidence": -0.108,
+      "no_speech_prob": 0.113,
+      "words": []
+    },
+    {
+      "id": 45,
+      "start": 289.0,
+      "end": 294.0,
+      "text": "For a narcissist, self-reflection is hard from an unflattering angle.",
+      "confidence": -0.108,
+      "no_speech_prob": 0.113,
+      "words": []
+    }
+  ],
+  "words": [],
+  "model_used": "base",
+  "device_used": "cpu",
+  "total_duration": 294.0,
+  "avg_confidence": -0.091,
+  "speech_duration": 292.0,
+  "speech_ratio": 0.993,
+  "export_info": {
+    "export_time": "2026-01-13T18:01:57.096244",
+    "export_format": "json",
+    "export_version": "1.0"
+  }
+}

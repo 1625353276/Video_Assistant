@@ -1,7 +1,7 @@
 # AI视频助手 - 后端依赖包
 gradio==6.3.0
-torch==2.9.1
-torchaudio==2.9.1
+torch==2.5.0
+torchaudio==2.5.0
 openai-whisper>=20230314
 
 # 视频处理
@@ -12,7 +12,7 @@ moviepy>=1.0.3
 ffmpeg-python>=0.2.0
 
 # 数据处理
-numpy>=1.24.0
+numpy==2.2.6
 pandas>=2.0.0
 
 # 文本向量和检索
@@ -32,38 +32,3 @@ pyyaml>=6.0
 
 requests==2.32.5
 googletrans==4.0.2
-
-# 开发和测试工具（可选）
-# pytest>=7.0.0
-# black>=23.0.0
-# flake8>=6.0.0
-
-# 文本处理
-requests~=2.32.5
-googletrans==4.0.2
-
-# 可选：分词库（提升BM25检索效果）
-# 中文分词
-# jieba>=0.42.1
-#
-# 英文分词
-# nltk>=3.8
-#
-# 安装后需要下载NLTK数据：
-# python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-
-# 注意事项：
-# 1. 需要系统安装ffmpeg
-#    - macOS: brew install ffmpeg
-#    - Ubuntu: sudo apt install ffmpeg
-#    - Windows: 下载ffmpeg并添加到PATH
-#
-# 2. GPU支持（可选）
-#    - 安装CUDA版本的PyTorch以获得GPU加速
-#    - 访问 https://pytorch.org/ 获取适合的安装命令
-#
-# 3. Whisper模型会在首次使用时自动下载
-#    - 模型大小：tiny(75MB)、base(142MB)、small(466MB)、medium(1.5GB)、large(2.9GB)
-#    - 建议使用base或small模型平衡速度和准确性
-requests~=2.32.5
-googletrans==4.0.0.2
