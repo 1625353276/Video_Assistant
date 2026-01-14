@@ -2,6 +2,9 @@
 models/
 !models/.gitkeep
 
+# 视频文件
+data/
+
 # Python
 __pycache__/
 *.py[cod]
