@@ -58,185 +58,99 @@ class QueryExpander(ABC):
         pass
 
 
-class RuleBasedExpander(QueryExpander):
-    """基于规则的查询扩展器"""
-    
-    def __init__(self, config_path: Optional[str] = None):
-        """
-        初始化基于规则的扩展器
-        
-        Args:
-            config_path: 同义词词典配置文件路径
-        """
-        self.synonym_dict = {}
-        self.domain_terms = {}
-        self.load_dictionaries(config_path)
-    
-    def load_dictionaries(self, config_path: Optional[str] = None):
-        """加载同义词词典和领域术语"""
-        # 默认同义词词典
-        self.synonym_dict = {
-            # 中文同义词
-            "智能手机": ["手机", "移动设备", "手持设备", "智能终端"],
-            "定位": ["位置", "位置服务", "定位服务", "导航"],
-            "原理": ["机制", "工作原理", "工作方式", "实现方式"],
-            "技术": ["科技", "技术方案", "技术手段", "方法"],
-            "系统": ["体系", "框架", "架构", "平台"],
-            
-            # 英文同义词
-            "smartphone": ["phone", "mobile device", "handheld device", "cell phone"],
-            "location": ["position", "positioning", "gps", "navigation"],
-            "technology": ["tech", "technique", "method", "approach"],
-            "system": ["framework", "platform", "architecture", "structure"]
-        }
-        
-        # 领域术语映射
-        self.domain_terms = {
-            # 技术术语映射
-            "GPS": ["全球定位系统", "卫星定位", "Global Positioning System"],
-            "AI": ["人工智能", "机器学习", "深度学习", "artificial intelligence"],
-            "API": ["应用程序接口", "接口", "application programming interface"],
-            
-            # 通用术语映射
-            "如何": ["怎样", "怎么", "how to"],
-            "什么": ["啥", "是什么", "what is"],
-            "为什么": ["为何", "why", "原因"]
-        }
-        
-        # 如果提供了配置文件，从文件加载
-        if config_path and os.path.exists(config_path):
-            try:
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    self.synonym_dict.update(config.get('synonyms', {}))
-                    self.domain_terms.update(config.get('domain_terms', {}))
-                logger.info(f"从 {config_path} 加载了自定义词典")
-            except Exception as e:
-                logger.warning(f"加载词典配置失败: {e}")
-    
-    def get_method_name(self) -> str:
-        return "rule_based"
-    
-    def expand(self, query: str, **kwargs) -> List[GeneratedQuery]:
-        """基于规则扩展查询"""
-        queries = []
-        
-        # 1. 同义词替换
-        synonym_queries = self._expand_by_synonyms(query)
-        queries.extend(synonym_queries)
-        
-        # 2. 领域术语映射
-        domain_queries = self._expand_by_domain_terms(query)
-        queries.extend(domain_queries)
-        
-        # 3. 句式变化
-        pattern_queries = self._expand_by_patterns(query)
-        queries.extend(pattern_queries)
-        
-        return queries
-    
-    def _expand_by_synonyms(self, query: str) -> List[GeneratedQuery]:
-        """基于同义词扩展"""
-        queries = []
-        
-        for term, synonyms in self.synonym_dict.items():
-            if term in query:
-                for synonym in synonyms:
-                    new_query = query.replace(term, synonym)
-                    if new_query != query:
-                        weight = 0.9  # 同义词替换权重较高
-                        queries.append(GeneratedQuery(
-                            query=new_query,
-                            method="synonym",
-                            weight=weight,
-                            metadata={"original_term": term, "synonym": synonym}
-                        ))
-        
-        return queries
-    
-    def _expand_by_domain_terms(self, query: str) -> List[GeneratedQuery]:
-        """基于领域术语扩展"""
-        queries = []
-        
-        for term, mappings in self.domain_terms.items():
-            if term.lower() in query.lower():
-                for mapping in mappings:
-                    # 保持大小写
-                    if term.isupper():
-                        new_term = mapping.upper()
-                    elif term[0].isupper():
-                        new_term = mapping[0].upper() + mapping[1:]
-                    else:
-                        new_term = mapping
-                    
-                    new_query = query.replace(term, new_term)
-                    if new_query != query:
-                        weight = 0.8  # 领域术语映射权重中等
-                        queries.append(GeneratedQuery(
-                            query=new_query,
-                            method="domain_term",
-                            weight=weight,
-                            metadata={"original_term": term, "mapping": mapping}
-                        ))
-        
-        return queries
-    
-    def _expand_by_patterns(self, query: str) -> List[GeneratedQuery]:
-        """基于句式模式扩展"""
-        queries = []
-        
-        # 问句模式变化
-        question_patterns = [
-            (r"什么是(.+)", r"\1是什么"),
-            (r"如何(.+)", r"\1的方法"),
-            (r"为什么(.+)", r"\1的原因"),
-            (r"(.+)是什么", r"什么是\1"),
-            (r"(.+)如何工作", r"\1的工作原理"),
-        ]
-        
-        import re
-        for pattern, replacement in question_patterns:
-            match = re.search(pattern, query)
-            if match:
-                new_query = re.sub(pattern, replacement, query)
-                if new_query != query:
-                    weight = 0.7  # 句式变化权重较低
-                    queries.append(GeneratedQuery(
-                        query=new_query,
-                        method="pattern",
-                        weight=weight,
-                        metadata={"pattern": pattern, "replacement": replacement}
-                    ))
-        
-        return queries
-
-
 class ModelBasedExpander(QueryExpander):
     """基于语言模型的查询扩展器"""
     
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-                 similarity_threshold: float = 0.7):
+                 similarity_threshold: float = 0.7,
+                 cache_dir: Optional[str] = None):
         """
         初始化基于模型的扩展器
         
         Args:
             model_name: 句子变换器模型名称
             similarity_threshold: 相似度阈值
+            cache_dir: 模型缓存目录
         """
         self.model_name = model_name
         self.similarity_threshold = similarity_threshold
         self.model = None
+        
+        # 设置缓存目录
+        if cache_dir is None:
+            # 获取项目根目录
+            current_dir = Path(__file__).parent.parent.parent
+            self.cache_dir = current_dir / "models"
+        else:
+            self.cache_dir = Path(cache_dir)
+        
+        # 确保缓存目录存在
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        
         self._load_model()
     
     def _load_model(self):
         """加载语言模型"""
         try:
             from sentence_transformers import SentenceTransformer
-            # 使用与VectorStore相同的模型
-            self.model = SentenceTransformer(self.model_name)
-            logger.info(f"加载模型: {self.model_name}")
+            import torch
+            
+            # 确定设备
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            
+            # 设置模型缓存目录
+            cache_folder = self.cache_dir / "sentence-transformers"
+            cache_folder.mkdir(parents=True, exist_ok=True)
+            
+            # 检查模型是否已在本地缓存
+            model_cache_path = cache_folder / ("models--" + self.model_name.replace("/", "--"))
+            snapshots_path = model_cache_path / "snapshots"
+            
+            # 检查模型缓存是否存在且包含快照
+            has_valid_cache = False
+            if model_cache_path.exists() and snapshots_path.exists():
+                snapshot_dirs = [d for d in snapshots_path.iterdir() if d.is_dir()]
+                if snapshot_dirs:
+                    snapshot_path = snapshot_dirs[0]
+                    required_files = ["config.json", "modules.json", "model.safetensors"]
+                    missing_files = [f for f in required_files if not (snapshot_path / f).exists()]
+                    
+                    if not missing_files:
+                        has_valid_cache = True
+                        logger.info(f"发现本地模型缓存: {model_cache_path}")
+            
+            # 优先使用本地缓存
+            if has_valid_cache:
+                try:
+                    logger.info("尝试使用本地模型缓存，禁用网络下载")
+                    self.model = SentenceTransformer(
+                        self.model_name,
+                        device=device,
+                        cache_folder=str(cache_folder),
+                        local_files_only=True
+                    )
+                    logger.info(f"模型加载成功（本地缓存）")
+                    return
+                except Exception as e:
+                    logger.warning(f"本地缓存加载失败: {str(e)}")
+            
+            # 如果本地缓存不可用，尝试网络下载
+            logger.warning("本地模型不可用，尝试从网络下载...")
+            try:
+                self.model = SentenceTransformer(
+                    self.model_name,
+                    device=device,
+                    cache_folder=str(cache_folder)
+                )
+                logger.info(f"模型加载成功（网络下载）")
+                logger.info(f"模型文件已保存到: {cache_folder}")
+                return
+            except Exception as e:
+                logger.error(f"模型加载失败: {str(e)}")
+                self.model = None
+                
         except Exception as e:
-            logger.error(f"加载模型失败: {e}")
+            logger.error(f"模型加载失败: {e}")
             self.model = None
     
     def get_method_name(self) -> str:
@@ -389,9 +303,6 @@ class QueryWeightManager:
             method_weights: 不同扩展方法的权重配置
         """
         self.method_weights = method_weights or {
-            "synonym": 0.9,
-            "domain_term": 0.8,
-            "pattern": 0.7,
             "semantic": 0.8,
             "keyword": 0.6,
             "original": 1.0
@@ -441,33 +352,23 @@ class MultiQueryGenerator:
     """多查询生成器主类"""
     
     def __init__(self, 
-                 config_path: Optional[str] = None,
-                 enable_rule_based: bool = True,
-                 enable_model_based: bool = True,
-                 max_queries: int = 10):
+                 max_queries: int = 10,
+                 cache_dir: Optional[str] = None):
         """
         初始化多查询生成器
         
         Args:
-            config_path: 配置文件路径
-            enable_rule_based: 是否启用基于规则的扩展
-            enable_model_based: 是否启用基于模型的扩展
             max_queries: 最大生成查询数量
+            cache_dir: 模型缓存目录
         """
-        self.config_path = config_path
-        self.enable_rule_based = enable_rule_based
-        self.enable_model_based = enable_model_based
         self.max_queries = max_queries
         
         # 初始化扩展器
         self.expanders = []
         self.weight_manager = QueryWeightManager()
         
-        if enable_rule_based:
-            self.expanders.append(RuleBasedExpander(config_path))
-        
-        if enable_model_based:
-            self.expanders.append(ModelBasedExpander())
+        # 只使用模型扩展器
+        self.expanders.append(ModelBasedExpander(cache_dir=cache_dir))
         
         logger.info(f"多查询生成器初始化完成，启用了 {len(self.expanders)} 个扩展器")
     
@@ -538,8 +439,6 @@ class MultiQueryGenerator:
     def save_config(self, config_path: str):
         """保存配置"""
         config = {
-            "enable_rule_based": self.enable_rule_based,
-            "enable_model_based": self.enable_model_based,
             "max_queries": self.max_queries,
             "method_weights": self.weight_manager.method_weights
         }
@@ -557,8 +456,6 @@ class MultiQueryGenerator:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
             
-            self.enable_rule_based = config.get('enable_rule_based', True)
-            self.enable_model_based = config.get('enable_model_based', True)
             self.max_queries = config.get('max_queries', 10)
             
             if 'method_weights' in config:
@@ -573,7 +470,6 @@ class MultiQueryGenerator:
         return {
             "enabled_expanders": len(self.expanders),
             "max_queries": self.max_queries,
-            "rule_based_enabled": self.enable_rule_based,
-            "model_based_enabled": self.enable_model_based,
+            "model_based_enabled": True,
             "method_weights": self.weight_manager.method_weights
         }

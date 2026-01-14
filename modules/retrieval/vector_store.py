@@ -132,8 +132,8 @@ class VectorStore:
         snapshots_path = model_cache_path / "snapshots"
         
         # 检查模型缓存是否存在且包含快照
-        if model_cache_path.exists() and snapshots_path.exists() and any(snapshots_path.iterdir()):
-            # 获取第一个快照目录
+        has_valid_cache = False
+        if model_cache_path.exists() and snapshots_path.exists():
             snapshot_dirs = [d for d in snapshots_path.iterdir() if d.is_dir()]
             if snapshot_dirs:
                 # 检查快照目录是否包含必要文件
@@ -144,18 +144,16 @@ class VectorStore:
                 if not missing_files:
                     logger.info(f"发现本地模型缓存: {model_cache_path}")
                     logger.info(f"使用快照: {snapshot_path}")
+                    has_valid_cache = True
                 else:
-                    logger.info(f"本地缓存不完整，缺少文件: {missing_files}，将从远程下载")
+                    logger.info(f"本地缓存不完整，缺少文件: {missing_files}")
             else:
-                logger.info(f"本地缓存无快照，将从远程下载")
+                logger.info(f"本地缓存无快照")
         else:
-            logger.info(f"本地未找到模型缓存，将从远程下载")
+            logger.info(f"本地未找到模型缓存")
         
-        # 检查是否有本地缓存
-        has_local_cache = model_cache_path.exists() and snapshots_path.exists() and any(snapshots_path.iterdir())
-        
-        # 第一次尝试：优先使用本地缓存
-        if has_local_cache:
+        # 优先使用本地缓存
+        if has_valid_cache:
             try:
                 logger.info("尝试使用本地模型缓存，禁用网络下载")
                 self.model = SentenceTransformer(
@@ -167,11 +165,11 @@ class VectorStore:
                 logger.info(f"句子转换器模型加载成功（本地缓存）")
                 return
             except Exception as e:
-                logger.warning(f"本地缓存加载失败: {str(e)}，尝试网络下载")
+                logger.warning(f"本地缓存加载失败: {str(e)}")
         
-        # 第二次尝试：网络下载
+        # 如果本地缓存不可用，尝试网络下载（仅在必要时）
+        logger.warning("本地模型不可用，尝试从网络下载...")
         try:
-            logger.info("尝试从网络下载模型")
             self.model = SentenceTransformer(
                 self.model_name, 
                 device=self.device,
@@ -181,9 +179,9 @@ class VectorStore:
             logger.info(f"模型文件已保存到: {cache_folder}")
             return
         except Exception as e:
-            logger.warning(f"网络下载失败: {str(e)}")
+            logger.error(f"网络下载失败: {str(e)}")
             
-            # 第二次尝试：使用官方源（仅当当前不是官方源时）
+            # 最后尝试：使用官方源（仅当当前不是官方源时）
             if self.mirror_site != "official":
                 logger.info("尝试使用官方源重新下载...")
                 try:
@@ -307,10 +305,21 @@ class VectorStore:
         Args:
             query: 查询文本
             top_k: 返回的最相似文档数量
-            threshold: 相似度阈值
+            threshold: 相似度阈值 (0.0-1.0)
             
         Returns:
-            List[Dict]: 相似文档列表，包含相似度分数
+            List[Dict]: 相似文档列表，每个字典包含：
+                - document (Dict): 原始文档对象，包含text、start、end、confidence等字段
+                - metadata (Dict): 文档元数据字典
+                - similarity (float): 余弦相似度分数 (0.0-1.0)
+                - index (int): 文档在原始列表中的索引位置
+        
+        Example:
+            >>> results = vector_store.search("人工智能", top_k=3)
+            >>> for result in results:
+            ...     print(f"文本: {result['document']['text']}")
+            ...     print(f"相似度: {result['similarity']:.3f}")
+            ...     print(f"时间: {result['document']['start']}-{result['document']['end']}")
         """
         try:
             if self.embeddings is None or len(self.documents) == 0:

@@ -21,11 +21,9 @@ from modules.retrieval.multi_query import MultiQueryGenerator
 
 def load_test_transcript():
     """加载测试转录数据"""
-    # 使用项目中已有的转录数据
+    # 使用测试转录数据
     transcript_files = [
-        "data/transcripts/Test_20260113_095354_original.json",
-        "data/transcripts/Test_20260113_111830_original.json",
-        "data/transcripts/Test_20260113_113050_original.json"
+        "data/transcripts/test_transcript.json"
     ]
     
     base_path = Path(__file__).parent.parent
@@ -326,8 +324,6 @@ def test_multi_query_integration():
         vector_store = VectorStore()
         bm25_retriever = BM25Retriever()
         multi_query_generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False,  # 禁用模型避免依赖问题
             max_queries=5
         )
         
@@ -427,8 +423,6 @@ def test_multi_query_enhanced_retrieval():
         vector_store = VectorStore()
         bm25_retriever = BM25Retriever()
         multi_query_generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False,
             max_queries=8
         )
         

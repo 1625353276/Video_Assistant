@@ -142,6 +142,9 @@ data/transcripts/*.txt
 data/transcripts/*.srt
 data/transcripts/*.vtt
 
+# 测试文件例外
+!data/transcripts/test_transcript.json
+
 # 临时文件
 temp/
 tmp/

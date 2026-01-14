@@ -78,23 +78,42 @@ class HybridRetriever:
             logger.error(f"添加文档失败: {str(e)}")
             raise RuntimeError(f"添加文档失败: {str(e)}")
     
-    def search(self, query: str, 
-               top_k: int = 5,
-               threshold: float = 0.0,
-               vector_top_k: Optional[int] = None,
-               bm25_top_k: Optional[int] = None) -> List[Dict]:
+    def search(self, query: str,
+             top_k: int = 5,
+             threshold: float = 0.0,
+             vector_top_k: Optional[int] = None,
+             bm25_top_k: Optional[int] = None) -> List[Dict]:
         """
-        混合检索
+        混合检索（结合向量检索和BM25检索）
         
         Args:
             query: 查询文本
             top_k: 返回的最相关文档数量
-            threshold: 相关性阈值
+            threshold: 相关性阈值 (0.0-1.0)，低于此值的文档将被过滤
             vector_top_k: 向量检索返回的文档数量(默认为top_k*2)
             bm25_top_k: BM25检索返回的文档数量(默认为top_k*2)
             
         Returns:
-            List[Dict]: 相关文档列表
+            List[Dict]: 融合后的相关文档列表，每个字典包含：
+                - document (Dict): 原始文档对象，包含text、start、end、confidence等字段
+                - metadata (Dict): 文档元数据字典
+                - score (float): 融合后的相关性分数
+                - similarity (float): 向量检索相似度分数
+                - bm25_score (float): BM25检索分数
+                - vector_score (float): 向量检索分数
+                - index (int): 文档索引位置
+                - text (str): 文本内容（便捷访问字段）
+                - start (float): 开始时间（便捷访问字段）
+                - end (float): 结束时间（便捷访问字段）
+                - confidence (float): 置信度（便捷访问字段）
+        
+        Example:
+            >>> results = hybrid_retriever.search("人工智能", top_k=3)
+            >>> for result in results:
+            ...     print(f"文本: {result['text']}")
+            ...     print(f"融合分数: {result['score']:.3f}")
+            ...     print(f"向量分数: {result['similarity']:.3f}")
+            ...     print(f"BM25分数: {result['bm25_score']:.3f}")
         """
         try:
             # 设置默认的检索数量

@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 # 添加项目根目录到Python路径
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from modules.video.video_loader import VideoLoader
 from modules.video.audio_extractor import AudioExtractor

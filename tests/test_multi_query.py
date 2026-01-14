@@ -18,7 +18,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from modules.retrieval.multi_query import (
     MultiQueryGenerator,
-    RuleBasedExpander,
     ModelBasedExpander,
     QueryWeightManager,
     GeneratedQuery,
@@ -66,182 +65,6 @@ class TestMultiQueryResult(unittest.TestCase):
         self.assertEqual(len(result.generated_queries), 2)
         self.assertEqual(result.total_queries, 2)
         self.assertEqual(result.generation_methods, ["method1", "method2"])
-
-
-class TestRuleBasedExpander(unittest.TestCase):
-    """测试基于规则的查询扩展器"""
-    
-    def setUp(self):
-        """测试前准备"""
-        self.expander = RuleBasedExpander()
-    
-    def test_synonym_expansion_chinese(self):
-        """测试中文同义词扩展"""
-        query = "智能手机定位原理"
-        results = self.expander.expand(query)
-        
-        # 显示扩展后的内容
-        print(f"\n=== 中文同义词扩展演示 ===")
-        print(f"原始查询: '{query}'")
-        print(f"总扩展结果数量: {len(results)}")
-        
-        # 按方法分组显示
-        method_groups = {}
-        for q in results:
-            if q.method not in method_groups:
-                method_groups[q.method] = []
-            method_groups[q.method].append(q)
-        
-        for method, queries in method_groups.items():
-            print(f"\n{method} 扩展 ({len(queries)} 个):")
-            for i, q in enumerate(queries):
-                print(f"  {i+1}. '{q.query}' [权重: {q.weight}]")
-        
-        # 应该生成同义词替换的查询
-        synonym_queries = [q for q in results if q.method == "synonym"]
-        self.assertGreater(len(synonym_queries), 0)
-        
-        # 检查是否包含预期的同义词
-        query_texts = [q.query for q in synonym_queries]
-        self.assertTrue(any("手机" in text for text in query_texts))
-        self.assertTrue(any("移动设备" in text for text in query_texts))
-    
-    def test_synonym_expansion_english(self):
-        """测试英文同义词扩展"""
-        query = "smartphone location technology"
-        results = self.expander.expand(query)
-        
-        # 显示扩展后的内容
-        print(f"\n=== 英文同义词扩展演示 ===")
-        print(f"原始查询: '{query}'")
-        print(f"总扩展结果数量: {len(results)}")
-        
-        # 按方法分组显示
-        method_groups = {}
-        for q in results:
-            if q.method not in method_groups:
-                method_groups[q.method] = []
-            method_groups[q.method].append(q)
-        
-        for method, queries in method_groups.items():
-            print(f"\n{method} 扩展 ({len(queries)} 个):")
-            for i, q in enumerate(queries):
-                print(f"  {i+1}. '{q.query}' [权重: {q.weight}]")
-        
-        # 应该生成同义词替换的查询
-        synonym_queries = [q for q in results if q.method == "synonym"]
-        self.assertGreater(len(synonym_queries), 0)
-        
-        # 检查是否包含预期的同义词
-        query_texts = [q.query for q in synonym_queries]
-        self.assertTrue(any("phone" in text for text in query_texts))
-        self.assertTrue(any("mobile device" in text for text in query_texts))
-    
-    def test_domain_term_expansion(self):
-        """测试领域术语扩展"""
-        query = "GPS定位技术"
-        results = self.expander.expand(query)
-        
-        # 显示扩展后的内容
-        print(f"\n=== 领域术语扩展演示 ===")
-        print(f"原始查询: '{query}'")
-        print(f"总扩展结果数量: {len(results)}")
-        
-        # 按方法分组显示
-        method_groups = {}
-        for q in results:
-            if q.method not in method_groups:
-                method_groups[q.method] = []
-            method_groups[q.method].append(q)
-        
-        for method, queries in method_groups.items():
-            print(f"\n{method} 扩展 ({len(queries)} 个):")
-            for i, q in enumerate(queries):
-                print(f"  {i+1}. '{q.query}' [权重: {q.weight}]")
-                if q.metadata and 'original_term' in q.metadata:
-                    print(f"      映射: {q.metadata['original_term']} → {q.metadata.get('mapping', 'N/A')}")
-        
-        # 应该生成领域术语映射的查询
-        domain_queries = [q for q in results if q.method == "domain_term"]
-        self.assertGreater(len(domain_queries), 0)
-        
-        # 检查是否包含预期的术语映射
-        query_texts = [q.query for q in domain_queries]
-        self.assertTrue(any("全球定位系统" in text for text in query_texts))
-        self.assertTrue(any("卫星定位" in text for text in query_texts))
-    
-    def test_pattern_expansion(self):
-        """测试句式模式扩展"""
-        query = "什么是人工智能"
-        results = self.expander.expand(query)
-        
-        # 应该生成句式变化的查询
-        pattern_queries = [q for q in results if q.method == "pattern"]
-        if len(pattern_queries) > 0:
-            # 检查是否包含预期的句式变化
-            query_texts = [q.query for q in pattern_queries]
-            self.assertIn("人工智能是什么", query_texts)
-            
-            # 检查权重
-            for q in pattern_queries:
-                self.assertEqual(q.weight, 0.7)
-                self.assertEqual(q.method, "pattern")
-        else:
-            # 如果没有生成模式查询，这也是可以接受的（取决于正则表达式匹配）
-            self.assertEqual(len(pattern_queries), 0)
-    
-    def test_custom_dictionary_loading(self):
-        """测试自定义词典加载"""
-        # 创建临时配置文件
-        custom_config = {
-            "synonyms": {
-                "测试词": ["自定义同义词1", "自定义同义词2"]
-            },
-            "domain_terms": {
-                "测试术语": ["自定义映射1", "自定义映射2"]
-            }
-        }
-        
-        config_path = "test_config.json"
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(custom_config, f, ensure_ascii=False)
-        
-        try:
-            # 使用自定义配置创建扩展器
-            expander = RuleBasedExpander(config_path)
-            
-            # 测试自定义同义词
-            results = expander.expand("测试词")
-            synonym_queries = [q for q in results if q.method == "synonym"]
-            query_texts = [q.query for q in synonym_queries]
-            
-            self.assertTrue(any("自定义同义词1" in text for text in query_texts))
-            self.assertTrue(any("自定义同义词2" in text for text in query_texts))
-            
-        finally:
-            # 清理临时文件
-            if os.path.exists(config_path):
-                os.remove(config_path)
-    
-    def test_weight_assignment(self):
-        """测试权重分配"""
-        query = "智能手机定位"
-        results = self.expander.expand(query)
-        
-        # 检查同义词查询权重
-        synonym_queries = [q for q in results if q.method == "synonym"]
-        for q in synonym_queries:
-            self.assertEqual(q.weight, 0.9)
-        
-        # 检查领域术语查询权重
-        domain_queries = [q for q in results if q.method == "domain_term"]
-        for q in domain_queries:
-            self.assertEqual(q.weight, 0.8)
-        
-        # 检查句式变化查询权重
-        pattern_queries = [q for q in results if q.method == "pattern"]
-        for q in pattern_queries:
-            self.assertEqual(q.weight, 0.7)
 
 
 class TestModelBasedExpander(unittest.TestCase):
@@ -323,25 +146,24 @@ class TestQueryWeightManager(unittest.TestCase):
         """测试默认初始化"""
         manager = QueryWeightManager()
         
-        # 检查默认权重
-        self.assertEqual(manager.method_weights["synonym"], 0.9)
-        self.assertEqual(manager.method_weights["domain_term"], 0.8)
-        self.assertEqual(manager.method_weights["pattern"], 0.7)
+        # 检查默认权重（只保留模型扩展相关的权重）
+        self.assertEqual(manager.method_weights["semantic"], 0.8)
+        self.assertEqual(manager.method_weights["keyword"], 0.6)
         self.assertEqual(manager.method_weights["original"], 1.0)
     
     def test_custom_initialization(self):
         """测试自定义初始化"""
         custom_weights = {
-            "synonym": 0.5,
-            "domain_term": 0.6,
-            "pattern": 0.7
+            "semantic": 0.5,
+            "keyword": 0.6,
+            "original": 0.7
         }
         
         manager = QueryWeightManager(custom_weights)
         
-        self.assertEqual(manager.method_weights["synonym"], 0.5)
-        self.assertEqual(manager.method_weights["domain_term"], 0.6)
-        self.assertEqual(manager.method_weights["pattern"], 0.7)
+        self.assertEqual(manager.method_weights["semantic"], 0.5)
+        self.assertEqual(manager.method_weights["keyword"], 0.6)
+        self.assertEqual(manager.method_weights["original"], 0.7)
     
     def test_weight_normalization(self):
         """测试权重归一化"""
@@ -400,18 +222,25 @@ class TestMultiQueryGenerator(unittest.TestCase):
     
     def setUp(self):
         """测试前准备"""
-        self.generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False,  # 禁用模型避免实际加载
-            max_queries=5
-        )
+        # 使用模拟的模型扩展器来避免实际加载模型
+        with patch('modules.retrieval.multi_query.ModelBasedExpander') as mock_expander:
+            # 创建模拟扩展器
+            mock_instance = MagicMock()
+            mock_instance.expand.return_value = []
+            mock_instance.get_method_name.return_value = "model_based"
+            mock_expander.return_value = mock_instance
+            
+            self.generator = MultiQueryGenerator(
+                max_queries=5
+            )
+            
+            # 保存模拟引用以便后续测试使用
+            self.mock_expander_instance = mock_instance
     
     def test_initialization(self):
         """测试初始化"""
         self.assertEqual(self.generator.max_queries, 5)
-        self.assertTrue(self.generator.enable_rule_based)
-        self.assertFalse(self.generator.enable_model_based)
-        self.assertEqual(len(self.generator.expanders), 1)
+        self.assertEqual(len(self.generator.expanders), 1)  # 只有模型扩展器
     
     def test_generate_queries_basic(self):
         """测试基本查询生成"""
@@ -445,21 +274,15 @@ class TestMultiQueryGenerator(unittest.TestCase):
         self.assertAlmostEqual(total_weight, 1.0, places=5)
     
     def test_generate_queries_with_model_disabled(self):
-        """测试禁用模型时的查询生成"""
-        generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False
-        )
+        """测试模型扩展失败时的查询生成"""
+        # 模拟模型扩展失败
+        self.mock_expander_instance.expand.return_value = []
         
-        result = generator.generate_queries("GPS定位技术")
+        result = self.generator.generate_queries("GPS定位技术")
         
-        # 应该只有基于规则的扩展
-        methods = [q.method for q in result.generated_queries]
-        self.assertIn("original", methods)
-        self.assertIn("synonym", methods)
-        self.assertIn("domain_term", methods)
-        self.assertNotIn("semantic", methods)
-        self.assertNotIn("keyword", methods)
+        # 应该只有原始查询
+        self.assertEqual(len(result.generated_queries), 1)
+        self.assertEqual(result.generated_queries[0].method, "original")
     
     def test_max_queries_limit(self):
         """测试最大查询数量限制"""
@@ -492,8 +315,6 @@ class TestMultiQueryGenerator(unittest.TestCase):
             
             # 检查配置是否正确加载
             self.assertEqual(new_generator.max_queries, self.generator.max_queries)
-            self.assertEqual(new_generator.enable_rule_based, self.generator.enable_rule_based)
-            self.assertEqual(new_generator.enable_model_based, self.generator.enable_model_based)
             
         finally:
             # 清理临时文件
@@ -506,14 +327,12 @@ class TestMultiQueryGenerator(unittest.TestCase):
         
         self.assertIn("enabled_expanders", stats)
         self.assertIn("max_queries", stats)
-        self.assertIn("rule_based_enabled", stats)
         self.assertIn("model_based_enabled", stats)
         self.assertIn("method_weights", stats)
         
         self.assertEqual(stats["enabled_expanders"], 1)
         self.assertEqual(stats["max_queries"], 5)
-        self.assertTrue(stats["rule_based_enabled"])
-        self.assertFalse(stats["model_based_enabled"])
+        self.assertTrue(stats["model_based_enabled"])
     
     def test_error_handling(self):
         """测试错误处理"""
@@ -539,11 +358,19 @@ class TestIntegration(unittest.TestCase):
     
     def test_end_to_end_chinese_query(self):
         """端到端中文查询测试"""
-        generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False,  # 避免模型依赖
-            max_queries=8
-        )
+        # 使用模拟的模型扩展器
+        with patch('modules.retrieval.multi_query.ModelBasedExpander') as mock_expander:
+            # 创建模拟扩展器，返回一些测试查询
+            mock_instance = MagicMock()
+            mock_instance.expand.return_value = [
+                GeneratedQuery("智能手机定位原理", "semantic", 0.8),
+                GeneratedQuery("手机定位", "keyword", 0.6),
+                GeneratedQuery("定位技术", "keyword", 0.6)
+            ]
+            mock_instance.get_method_name.return_value = "model_based"
+            mock_expander.return_value = mock_instance
+            
+            generator = MultiQueryGenerator(max_queries=8)
         
         query = "智能手机定位原理"
         result = generator.generate_queries(query)
@@ -593,11 +420,19 @@ class TestIntegration(unittest.TestCase):
     
     def test_end_to_end_english_query(self):
         """端到端英文查询测试"""
-        generator = MultiQueryGenerator(
-            enable_rule_based=True,
-            enable_model_based=False,  # 避免模型依赖
-            max_queries=8
-        )
+        # 使用模拟的模型扩展器
+        with patch('modules.retrieval.multi_query.ModelBasedExpander') as mock_expander:
+            # 创建模拟扩展器，返回一些测试查询
+            mock_instance = MagicMock()
+            mock_instance.expand.return_value = [
+                GeneratedQuery("smartphone GPS technology", "semantic", 0.8),
+                GeneratedQuery("phone GPS", "keyword", 0.6),
+                GeneratedQuery("GPS navigation", "keyword", 0.6)
+            ]
+            mock_instance.get_method_name.return_value = "model_based"
+            mock_expander.return_value = mock_instance
+            
+            generator = MultiQueryGenerator(max_queries=8)
         
         query = "smartphone GPS technology"
         result = generator.generate_queries(query)
@@ -657,7 +492,6 @@ def run_tests():
     test_classes = [
         TestGeneratedQuery,
         TestMultiQueryResult,
-        TestRuleBasedExpander,
         TestModelBasedExpander,
         TestQueryWeightManager,
         TestMultiQueryGenerator,

@@ -1,0 +1,136 @@
+# AI视频助手 - 模型配置文件
+# Model Configuration for AI Video Assistant
+# 专注于LLM和QA系统配置
+
+# LLM模型配置（用于QA系统）
+llm:
+  # LLM提供商: openai, anthropic, local, huggingface
+  provider: "openai"
+  # OpenAI配置（使用讯飞星火API）
+  openai:
+    # API密钥（请根据实际API Key格式调整）
+    api_key: "c4a873d3c82e517b9e9534b5b2eee054:NjBmN2RjYTNlMDE3NjYxZjFlYWVkZWEx"
+    # 模型名称（必填：使用讯飞星火模型ID）
+    model_name: "xop3qwen1b7"
+    # API基础URL（讯飞星火新API地址）
+    base_url: "https://maas-api.cn-huabei-1.xf-yun.com/v2"
+    # 最大token数
+    max_tokens: 4096
+    # 温度参数
+    temperature: 0.7
+    # 是否启用流式输出
+    stream: false
+  # Anthropic配置
+  anthropic:
+    # API密钥（从环境变量读取）
+    api_key: "${ANTHROPIC_API_KEY}"
+    # 模型名称
+    model_name: "claude-3-sonnet-20240229"
+    # 最大token数
+    max_tokens: 2048
+  # 本地模型配置
+  local:
+    # 模型路径
+    model_path: "models/llm"
+    # 模型类型: llama, qwen, chatglm
+    model_type: "qwen"
+    # 模型大小: 7b, 14b, 72b
+    model_size: "7b"
+    # 设备选择
+    device: "auto"
+    # 量化设置
+    quantization:
+      # 是否启用量化
+      enabled: false
+      # 量化位数: 4bit, 8bit
+      bits: 4
+    # 生成参数
+    generation:
+      max_tokens: 2048
+      temperature: 0.7
+      top_p: 0.9
+      repetition_penalty: 1.1
+  # HuggingFace配置
+  huggingface:
+    # 模型名称
+    model_name: "microsoft/DialoGPT-medium"
+    # 设备选择
+    device: "auto"
+    # 生成参数
+    generation:
+      max_tokens: 2048
+      temperature: 0.7
+      top_p: 0.9
+      do_sample: true
+
+
+
+# QA系统配置
+qa_system:
+  # 对话链配置
+  conversation_chain:
+    history_length: 15          # 对话历史长度（增加以支持更长对话）
+    enable_compression: true     # 是否启用上下文压缩
+    max_context_length: 8000    # 最大上下文长度（增加以支持更长视频）
+    compression_model: "sentence-transformers/all-MiniLM-L6-v2"
+    # 消息管理配置
+    max_history_messages: 10    # 最大历史消息数量
+    token_limit: 6000          # Token限制（为生成留出空间）
+  
+  # 记忆管理配置
+  memory:
+    memory_type: "buffer"       # 记忆类型: buffer, summary, knowledge_graph
+    buffer_size: 1000          # 缓冲区大小
+    summary_model: "t5-small"   # 记忆摘要模型
+    enable_persistence: true    # 是否启用持久化
+    storage_path: "data/memory" # 记忆存储路径
+    # 重要性评分配置
+    importance_decay_days: 30  # 重要性衰减天数
+    min_importance: 0.1        # 最小重要性阈值
+    
+  # 提示模板配置
+  prompt:
+    system_template: "你是一个专业的视频内容助手，能够根据提供的视频转录内容回答用户问题。请基于以下内容回答问题：\n\n{context}\n\n问题：{question}"
+    user_template: "{question}"
+    enable_few_shot: true       # 是否启用少样本学习
+    few_shot_examples: 3        # 示例数量
+    examples_path: "config/qa_examples.json"
+    # 示例选择配置
+    max_examples_per_category: 2  # 每个类别最大示例数
+    example_similarity_threshold: 0.7  # 示例相似度阈值
+    
+  # 多查询生成配置
+  multi_query:
+    max_queries: 10             # 最大查询数量
+    similarity_threshold: 0.7   # 相似度阈值
+    enable_weight_management: true  # 是否启用权重管理
+    # 扩展器配置
+    expanders:
+      model_based:
+        enabled: true
+        model_name: "sentence-transformers/all-MiniLM-L6-v2"
+        max_expansions: 5
+    
+  # 检索配置
+  retrieval:
+    top_k: 5                    # 默认检索文档数量
+    similarity_threshold: 0.3   # 相似度阈值
+    # 混合检索配置
+    hybrid:
+      fusion_method: "weighted_average"  # 融合方法: weighted_average, rrf, condorcet
+      vector_weight: 0.6               # 向量检索权重
+      bm25_weight: 0.4                 # BM25检索权重
+      enable_parallel: true            # 是否启用并行检索
+    
+  # 上下文管理配置
+  context:
+    strategy: "full"             # 上下文策略: full, layered
+    max_video_context_length: 6000  # 最大视频上下文长度
+    compression_ratio: 0.7        # 压缩比例
+    # 分层上下文配置
+    layered:
+      core_context_ratio: 0.4    # 核心上下文比例
+      extended_context_ratio: 0.3  # 扩展上下文比例
+      summary_ratio: 0.3         # 摘要比例
+
+

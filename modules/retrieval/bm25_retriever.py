@@ -23,46 +23,11 @@ from collections import Counter, defaultdict
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 尝试导入中文分词库
-try:
-    import jieba
-    HAS_JIEBA = True
-except ImportError:
-    HAS_JIEBA = False
-    logger.warning("jieba未安装，中文分词功能将受限")
-
-# 尝试导入英文分词库
-try:
-    import nltk
-    from nltk.tokenize import word_tokenize
-    from nltk.corpus import stopwords
-    HAS_NLTK = True
-    
-    # 设置NLTK数据路径
-    import os
-    current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    nltk_data_path = os.path.join(current_dir, 'nltk_data')
-    if os.path.exists(nltk_data_path):
-        nltk.data.path.append(nltk_data_path)
-        logger.info(f"添加NLTK数据路径: {nltk_data_path}")
-    
-    # 检查必要的数据是否存在
-    try:
-        nltk.data.find('tokenizers/punkt_tab')
-    except LookupError:
-        try:
-            nltk.data.find('tokenizers/punkt')
-        except LookupError:
-            logger.warning("NLTK punkt数据未找到，英文分词功能将受限")
-    
-    try:
-        nltk.data.find('corpora/stopwords')
-    except LookupError:
-        logger.warning("NLTK stopwords数据未找到，英文停用词功能将受限")
-        
-except ImportError:
-    HAS_NLTK = False
-    logger.warning("nltk未安装，英文分词功能将受限")
+# 不使用外部分词库，使用内置分词
+HAS_JIEBA = False
+HAS_NLTK = False
+NLTK_AVAILABLE = False
+logger.info("BM25检索器使用内置分词功能")
 
 
 class BM25Retriever:
@@ -110,25 +75,20 @@ class BM25Retriever:
             '但是', '然后', '如果', '虽然', '可是', '然而', '因此', '这样', '那样'
         }
         
-        # 英文停用词
-        english_stop_words = set()
-        if HAS_NLTK:
-            try:
-                english_stop_words = set(stopwords.words('english'))
-            except:
-                english_stop_words = {
-                    'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
-                    'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his',
-                    'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
-                    'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which',
-                    'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
-                    'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having',
-                    'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if',
-                    'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for',
-                    'with', 'through', 'during', 'before', 'after', 'above', 'below',
-                    'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again',
-                    'further', 'then', 'once'
-                }
+        # 英文停用词：使用内置停用词，避免依赖NLTK
+        english_stop_words = {
+            'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
+            'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his',
+            'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
+            'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which',
+            'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
+            'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having',
+            'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if',
+            'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for',
+            'with', 'through', 'during', 'before', 'after', 'above', 'below',
+            'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again',
+            'further', 'then', 'once'
+        }
         
         # 合并停用词
         self.stop_words.update(chinese_stop_words)
@@ -177,21 +137,20 @@ class BM25Retriever:
         tokens = []
         
         if language == 'zh':
-            # 中文分词
-            if HAS_JIEBA:
-                tokens = list(jieba.cut(text))
-            else:
-                # 简单的中文分词：按字符分割
-                tokens = list(re.findall(r'[\u4e00-\u9fff]+', text))
+            # 中文分词：简单的字符级分割，避免依赖jieba
+            # 提取中文字符序列
+            tokens = list(re.findall(r'[\u4e00-\u9fff]+', text))
+            # 如果没有找到中文字符，则按单个字符分割
+            if not tokens:
+                tokens = list(text)
         else:
-            # 英文分词 - 使用简单正则表达式避免NLTK依赖
-            # 改进的英文分词：处理标点符号和特殊字符
+            # 英文分词：使用正则表达式，避免依赖NLTK
             text = text.lower()
-            # 将标点符号替换为空格
+            # 将标点符号和特殊字符替换为空格
             text = re.sub(r'[^\w\s]', ' ', text)
             # 分割单词
             tokens = text.split()
-            # 过滤掉非字母的token
+            # 过滤掉非字母的token和空字符串
             tokens = [token for token in tokens if re.match(r'^[a-zA-Z]+$', token)]
         
         # 过滤停用词和短词
@@ -310,19 +269,30 @@ class BM25Retriever:
         
         return score
     
-    def search(self, query: str, 
-               top_k: int = 5,
-               threshold: float = 0.0) -> List[Dict]:
+    def search(self, query: str,
+             top_k: int = 5,
+             threshold: float = 0.0) -> List[Dict]:
         """
-        检索相关文档
+        检索相关文档（基于BM25算法）
         
         Args:
             query: 查询文本
             top_k: 返回的最相关文档数量
-            threshold: 相关性阈值
+            threshold: 相关性阈值 (0.0-1.0)，低于此值的文档将被过滤
             
         Returns:
-            List[Dict]: 相关文档列表，包含BM25分数
+            List[Dict]: 相关文档列表，每个字典包含：
+                - document (Dict): 原始文档对象，包含text、start、end、confidence等字段
+                - metadata (Dict): 文档元数据字典
+                - score (float): BM25相关性分数
+                - index (int): 文档在原始列表中的索引位置
+        
+        Example:
+            >>> results = bm25_retriever.search("机器学习", top_k=3)
+            >>> for result in results:
+            ...     print(f"文本: {result['document']['text']}")
+            ...     print(f"BM25分数: {result['score']:.3f}")
+            ...     print(f"时间: {result['document']['start']}-{result['document']['end']}")
         """
         try:
             if not self.documents:
