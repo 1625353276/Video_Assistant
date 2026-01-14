@@ -63,16 +63,18 @@ class TranslationResult:
 class TextTranslator:
     """文本翻译器，支持多种翻译策略"""
 
-    def __init__(self, default_method: str = "deep-translator"):
+    def __init__(self, default_method: str = "deep-translator", progress_callback=None):
         """
         初始化翻译器
 
         Args:
             default_method: 翻译方法 ("auto", "googletrans", "deep-translator", "mock")
+            progress_callback: 进度回调函数，接收(current, total, message)参数
         """
         self.default_method = self._determine_best_method(default_method)
         self.translator = None
         self.translation_cache = {}
+        self.progress_callback = progress_callback
         self._init_translator()
 
     def _determine_best_method(self, preferred_method: str) -> str:
@@ -111,6 +113,18 @@ class TextTranslator:
         else:
             print("⚠ 使用模拟翻译模式（仅支持有限词汇）")
             self.default_method = "mock"
+    
+    def _update_progress(self, current: int, total: int, message: str = ""):
+        """更新翻译进度"""
+        if self.progress_callback:
+            self.progress_callback(current, total, message)
+        
+        # 同时在终端显示进度
+        if total > 0:
+            percent = int((current / total) * 100)
+            print(f"翻译进度: {current}/{total} ({percent}%) {message}")
+        else:
+            print(f"翻译进度: {message}")
 
     def detect_language(self, text: str) -> str:
         """
@@ -340,11 +354,15 @@ class TextTranslator:
         批量翻译文本段落
         """
         translated_segments = []
+        total_segments = len(segments)
+        
+        # 更新初始进度
+        self._update_progress(0, total_segments, "开始翻译...")
 
         for i, segment in enumerate(segments):
-            # 显示进度
-            if i % 10 == 0:
-                print(f"翻译进度: {i + 1}/{len(segments)}")
+            # 更新进度
+            if i % 5 == 0 or i == total_segments - 1:  # 更频繁地更新进度
+                self._update_progress(i + 1, total_segments, f"正在翻译第 {i + 1}/{total_segments} 段")
 
             translated_segment = segment.copy()
 
@@ -361,6 +379,8 @@ class TextTranslator:
 
             translated_segments.append(translated_segment)
 
+        # 更新完成进度
+        self._update_progress(total_segments, total_segments, "翻译完成")
         return translated_segments
 
     def translate_transcript(self, transcript: Dict[str, Any],
@@ -372,8 +392,12 @@ class TextTranslator:
             return transcript
 
         translated_transcript = transcript.copy()
+        
+        # 更新进度
+        self._update_progress(0, 0, "开始翻译转录结果...")
 
         if "text" in transcript:
+            self._update_progress(0, 0, "翻译完整文本...")
             translation_result = self.translate(transcript["text"], target_lang)
             translated_transcript["text"] = translation_result.translated_text
             translated_transcript["translation_metadata"] = {
@@ -385,6 +409,7 @@ class TextTranslator:
             }
 
         if "segments" in transcript:
+            self._update_progress(0, 0, "翻译分段文本...")
             translated_transcript["segments"] = self.translate_segments(
                 transcript["segments"], target_lang
             )
@@ -397,10 +422,14 @@ class TextTranslator:
         批量翻译文本
         """
         results = []
+        total_texts = len(texts)
+        
+        # 更新初始进度
+        self._update_progress(0, total_texts, "开始批量翻译...")
 
         for i, text in enumerate(texts):
-            if i % 5 == 0:
-                print(f"批量翻译进度: {i + 1}/{len(texts)}")
+            # 更新进度
+            self._update_progress(i + 1, total_texts, f"正在翻译第 {i + 1}/{total_texts} 条文本")
 
             result = self.translate(text, target_lang, source_lang)
             results.append(result)
@@ -409,6 +438,8 @@ class TextTranslator:
             if self.default_method in ["googletrans", "deep-translator"]:
                 time.sleep(0.2)  # 200ms 延迟
 
+        # 更新完成进度
+        self._update_progress(total_texts, total_texts, "批量翻译完成")
         return results
 
     def save_translation_cache(self, file_path: str):

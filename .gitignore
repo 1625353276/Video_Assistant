@@ -4,6 +4,7 @@ models/
 
 # 视频文件
 data/
+data/uploads/
 
 # Python
 __pycache__/
