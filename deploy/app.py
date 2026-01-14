@@ -582,12 +582,12 @@ class VideoAssistant:
                 # 混合搜索
                 hybrid_results = self.hybrid_retriever.search(query, top_k=max_results, threshold=threshold)
                 for result in hybrid_results:
-                    doc = result["document"]
+                    # 混合检索器已在顶层包含text、start、end等字段
                     results.append({
-                        "text": doc["text"],
-                        "timestamp": doc["start"],
+                        "text": result["text"],
+                        "timestamp": result["start"],
                         "score": round(result["score"], 3),
-                        "end": doc["end"],
+                        "end": result["end"],
                         "type": "hybrid",
                         "vector_score": round(result.get("vector_score", 0), 3),
                         "bm25_score": round(result.get("bm25_score", 0), 3)
@@ -862,9 +862,21 @@ def create_video_qa_interface():
         if not video_data[video_id].get("transcript"):
             return "视频尚未转录完成，无法构建索引", gr.Textbox(visible=False), gr.HTML(visible=False)
         
-        # 返回开始构建的状态
+        # 设置构建状态
         video_data[video_id]["index_building"] = True
-        return "正在构建检索索引，请稍候...", gr.Textbox(value="⏳ 正在构建向量索引和BM25索引...", visible=True), gr.HTML(value="<div style='width:100%; background-color:#fff3cd; border-radius:5px; padding:5px; text-align:center;'>⏳ 正在构建索引...</div>", visible=True)
+        
+        # 实际执行构建索引
+        try:
+            result = assistant.build_index_background(video_id)
+            if "error" in result:
+                video_data[video_id]["index_building"] = False
+                return f"构建失败: {result['error']}", gr.Textbox(visible=False), gr.HTML(visible=False)
+            else:
+                video_data[video_id]["index_building"] = False
+                return result.get("message", "索引构建完成"), gr.Textbox(visible=False), gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ {result.get('message', '索引构建完成')}</div>", visible=True)
+        except Exception as e:
+            video_data[video_id]["index_building"] = False
+            return f"构建失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 开始新对话
     def start_new_chat():
