@@ -221,7 +221,7 @@ class VideoAssistant:
         """初始化视频助手"""
         self.video_loader = VideoLoader()
         self.audio_extractor = AudioExtractor()
-        self.whisper_asr = WhisperASR(model_size="small")
+        self.whisper_asr = WhisperASR(model_size="base")
         self.file_manager = FileManager()
         
         # 翻译进度跟踪
@@ -280,6 +280,9 @@ class VideoAssistant:
         os.makedirs("data/transcripts", exist_ok=True)
         os.makedirs("data/temp", exist_ok=True)
         os.makedirs("data/vectors", exist_ok=True)
+        
+        # 对话链管理
+        self.conversation_chains = {}
     
     def _on_translation_progress(self, current: int, total: int, message: str):
         """翻译进度回调函数"""
@@ -455,10 +458,51 @@ class VideoAssistant:
         
         return videos
     
+    def _create_conversation_chain(self, video_id):
+        """为视频创建对话链"""
+        if not MOCK_MODE:
+            try:
+                # 导入对话链
+                from modules.qa.conversation_chain import ConversationChain
+                
+                # 检查索引文件是否存在
+                vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
+                bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
+                
+                import os
+                if not os.path.exists(vector_index_path) or not os.path.exists(bm25_index_path):
+                    print(f"索引文件不存在，创建无检索器的对话链")
+                    # 创建无检索器的对话链，仍然可以进行基本对话
+                    return ConversationChain()
+                
+                # 创建检索器
+                vector_store = VectorStore()
+                vector_store.load_index(vector_index_path)
+                
+                bm25_retriever = BM25Retriever()
+                bm25_retriever.load_index(bm25_index_path)
+                
+                hybrid_retriever = HybridRetriever(
+                    vector_store=vector_store,
+                    bm25_retriever=bm25_retriever
+                )
+                
+                # 创建带检索器的对话链
+                return ConversationChain(retriever=hybrid_retriever)
+            except Exception as e:
+                print(f"创建对话链失败，使用基本对话链: {e}")
+                # 即使检索器创建失败，也返回基本对话链
+                try:
+                    from modules.qa.conversation_chain import ConversationChain
+                    return ConversationChain()
+                except Exception as e2:
+                    print(f"创建基本对话链也失败: {e2}")
+                    return None
+        return None
+    
     def chat_with_video(self, video_id, question, chat_history, temperature=0.7):
         """
         基于视频内容进行问答
-        注意：问答功能在modules/qa/中未实现
         """
         if video_id not in video_data:
             return "视频不存在", chat_history
@@ -468,8 +512,41 @@ class VideoAssistant:
         if not video_info.get("transcript"):
             return "视频尚未处理完成，无法进行问答", chat_history
         
-        # 问答功能未实现，需要实现 modules/qa/ 中的相关模块
-        return f"问答功能尚未实现。问题：{question}\n注意：需要在modules/qa/中实现conversation_chain等模块", chat_history + [(question, f"问答功能尚未实现。问题：{question}")]
+        # 获取或创建对话链
+        if video_id not in self.conversation_chains:
+            self.conversation_chains[video_id] = self._create_conversation_chain(video_id)
+        
+        conversation_chain = self.conversation_chains[video_id]
+        
+        if conversation_chain is None:
+            return "对话链初始化失败，请重启应用或联系管理员", chat_history
+        
+        try:
+            # 调用对话链
+            result = conversation_chain.chat(question)
+            
+            # 检查是否有检索结果
+            retrieved_count = len(result.get('retrieved_docs', []))
+            if retrieved_count == 0:
+                # 如果没有检索结果，可能是索引未构建
+                response = result['response']
+                if "未找到相关内容" not in response:
+                    # 添加提示信息
+                    response = f"{response}\n\n💡 提示：如需基于视频内容的精准回答，请先在'内容搜索'中点击'构建检索索引'按钮。"
+            else:
+                response = result['response']
+            
+            # 确保历史记录格式正确
+            if not isinstance(chat_history, list):
+                chat_history = []
+            
+            # 添加新消息到历史记录（使用字典格式）
+            chat_history.append({"role": "user", "content": question})
+            chat_history.append({"role": "assistant", "content": response})
+            
+            return response, chat_history
+        except Exception as e:
+            return f"问答失败: {str(e)}", chat_history
     
     # 注意：问答功能在modules/qa/中未实现
     # 需要实现 modules/qa/conversation_chain.py 等模块
@@ -816,6 +893,25 @@ class VideoAssistant:
                 "timestamp": time.time()
             }
             return {"error": f"翻译失败: {str(e)}"}
+    
+    def get_conversation_stats(self, video_id):
+        """获取对话统计信息"""
+        if video_id in self.conversation_chains:
+            return self.conversation_chains[video_id].get_stats()
+        return {}
+    
+    def clear_conversation(self, video_id):
+        """清除指定视频的对话历史"""
+        if video_id in self.conversation_chains:
+            self.conversation_chains[video_id].clear_history()
+            return True
+        return False
+    
+    def get_conversation_history(self, video_id):
+        """获取对话历史"""
+        if video_id in self.conversation_chains:
+            return self.conversation_chains[video_id].get_conversation_history()
+        return []
 
 
 # 创建全局助手实例
@@ -905,11 +1001,27 @@ def create_video_qa_interface():
             return "", history
         
         if not video_selector:
-            return "", history + [(question, "请先选择一个视频")]
+            # 添加错误消息到历史记录
+            history.append({"role": "user", "content": question})
+            history.append({"role": "assistant", "content": "请先选择一个视频"})
+            return "", history
         
         video_id = video_selector.split(":")[0].strip()  # 假设格式为 "video_id: filename"
         
+        # 调用对话功能
         answer, updated_history = assistant.chat_with_video(video_id, question, history)
+        
+        # 确保历史记录格式正确
+        if not isinstance(updated_history, list):
+            updated_history = []
+        
+        # 如果历史记录是元组格式，转换为字典格式
+        if updated_history and isinstance(updated_history[0], tuple):
+            formatted_history = []
+            for user_msg, assistant_msg in updated_history:
+                formatted_history.append({"role": "user", "content": user_msg})
+                formatted_history.append({"role": "assistant", "content": assistant_msg})
+            updated_history = formatted_history
         
         return "", updated_history
     
@@ -1042,7 +1154,11 @@ def create_video_qa_interface():
             return f"构建失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 开始新对话
-    def start_new_chat():
+    def start_new_chat(video_selector):
+        """开始新对话"""
+        if video_selector:
+            video_id = video_selector.split(":")[0].strip()
+            assistant.clear_conversation(video_id)
         return [], ""
     
     # 更新视频选择器
@@ -1289,6 +1405,7 @@ def create_video_qa_interface():
         # 新对话事件
         new_chat_btn.click(
             start_new_chat,
+            inputs=[video_selector],
             outputs=[chatbot, question_input]
         )
         

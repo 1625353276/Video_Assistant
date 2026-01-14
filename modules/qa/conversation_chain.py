@@ -144,14 +144,21 @@ class ConversationChain:
             构建的上下文文本
         """
         if not retrieved_docs:
-            return "未找到相关内容。"
+            # 返回空字符串，不发送"未找到相关内容"给LLM
+            return ""
         
         # 构建上下文文本
         context_parts = []
         for i, doc in enumerate(retrieved_docs, 1):
-            doc_text = doc.get('text', '')
-            start_time = doc.get('start', 0)
-            end_time = doc.get('end', 0)
+            # 从不同的可能字段中获取文档文本
+            if 'document' in doc:
+                doc_text = doc['document'].get('text', '')
+                start_time = doc['document'].get('start', 0)
+                end_time = doc['document'].get('end', 0)
+            else:
+                doc_text = doc.get('text', '')
+                start_time = doc.get('start', 0)
+                end_time = doc.get('end', 0)
             
             # 格式化时间戳
             start_str = f"{int(start_time//60):02d}:{int(start_time%60):02d}"
@@ -242,8 +249,8 @@ class ConversationChain:
         system_prompt = self._build_system_prompt()
         messages.append({"role": "system", "content": system_prompt})
         
-        # 2. 视频内容背景 - 一次性发送完整视频内容
-        if context:
+        # 2. 视频内容背景 - 只有在有上下文时才添加
+        if context and context.strip():
             video_context_prompt = f"以下是与问题相关的视频内容：\n\n{context}"
             messages.append({"role": "system", "content": video_context_prompt})
         

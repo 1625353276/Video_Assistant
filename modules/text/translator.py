@@ -391,6 +391,12 @@ class TextTranslator:
         if not transcript:
             return transcript
 
+        if target_lang:
+            if target_lang == "English":
+                target_lang = "en"
+            elif target_lang == "中文":
+                target_lang = "zh"
+
         translated_transcript = transcript.copy()
         
         # 更新进度
