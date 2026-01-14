@@ -186,16 +186,17 @@ class HybridRetriever:
             else:
                 result = bm25_map[idx].copy()
             
-            # 更新分数
+            # 更新分数，保持原有的similarity字段不变
             result["score"] = fused_score
             result["vector_score"] = vector_score
             result["bm25_score"] = bm25_score
             
-            # 将document中的常用字段提取到顶层，方便访问
-            if "document" in result:
-                for key in ["text", "id", "start", "end", "confidence"]:
-                    if key in result["document"]:
-                        result[key] = result["document"][key]
+            # 注释掉字段提取逻辑，保持数据结构一致
+            # 如果需要访问这些字段，统一通过result["document"]访问
+            # if "document" in result:
+            #     for key in ["text", "id", "start", "end", "confidence"]:
+            #         if key in result["document"]:
+            #             result[key] = result["document"][key]
             
             fused_results.append(result)
         
@@ -253,11 +254,11 @@ class HybridRetriever:
             result["vector_rank"] = vector_ranks.get(idx, len(vector_results) + 1)
             result["bm25_rank"] = bm25_ranks.get(idx, len(bm25_results) + 1)
             
-            # 将document中的常用字段提取到顶层，方便访问
-            if "document" in result:
-                for key in ["text", "id", "start", "end", "confidence"]:
-                    if key in result["document"]:
-                        result[key] = result["document"][key]
+            # 注释掉字段提取逻辑，保持数据结构一致
+            # if "document" in result:
+            #     for key in ["text", "id", "start", "end", "confidence"]:
+            #         if key in result["document"]:
+            #             result[key] = result["document"][key]
             
             fused_results.append(result)
         
@@ -314,11 +315,11 @@ class HybridRetriever:
             result["score"] = win_counts[idx] / len(all_indices)  # 归一化分数
             result["condorcet_wins"] = win_counts[idx]
             
-            # 将document中的常用字段提取到顶层，方便访问
-            if "document" in result:
-                for key in ["text", "id", "start", "end", "confidence"]:
-                    if key in result["document"]:
-                        result[key] = result["document"][key]
+            # 注释掉字段提取逻辑，保持数据结构一致
+            # if "document" in result:
+            #     for key in ["text", "id", "start", "end", "confidence"]:
+            #         if key in result["document"]:
+            #             result[key] = result["document"][key]
             
             fused_results.append(result)
         

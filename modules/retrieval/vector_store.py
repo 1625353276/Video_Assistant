@@ -79,6 +79,10 @@ class VectorStore:
         os.environ['TRANSFORMERS_CACHE'] = str(self.cache_dir / "transformers")
         os.environ['HF_HOME'] = str(self.cache_dir / "huggingface")
         
+        # SentenceTransformer特定的缓存目录
+        st_cache_dir = self.cache_dir / "sentence-transformers"
+        st_cache_dir.mkdir(parents=True, exist_ok=True)
+        
         # 设置镜像站点环境变量
         if mirror_site != "official":
             os.environ['HF_ENDPOINT'] = self.mirror_url
@@ -86,6 +90,7 @@ class VectorStore:
         
         logger.info(f"初始化向量存储，模型: {model_name}, 设备: {self.device}")
         logger.info(f"模型缓存目录: {self.cache_dir}")
+        logger.info(f"SentenceTransformer缓存目录: {st_cache_dir}")
     
     def _determine_device(self, device: Optional[str]) -> str:
         """
@@ -122,18 +127,61 @@ class VectorStore:
         cache_folder = self.cache_dir / "sentence-transformers"
         cache_folder.mkdir(parents=True, exist_ok=True)
         
-        # 第一次尝试：使用当前镜像
+        # 检查模型是否已在本地缓存
+        model_cache_path = cache_folder / ("models--" + self.model_name.replace("/", "--"))
+        snapshots_path = model_cache_path / "snapshots"
+        
+        # 检查模型缓存是否存在且包含快照
+        if model_cache_path.exists() and snapshots_path.exists() and any(snapshots_path.iterdir()):
+            # 获取第一个快照目录
+            snapshot_dirs = [d for d in snapshots_path.iterdir() if d.is_dir()]
+            if snapshot_dirs:
+                # 检查快照目录是否包含必要文件
+                snapshot_path = snapshot_dirs[0]
+                required_files = ["config.json", "modules.json", "model.safetensors"]
+                missing_files = [f for f in required_files if not (snapshot_path / f).exists()]
+                
+                if not missing_files:
+                    logger.info(f"发现本地模型缓存: {model_cache_path}")
+                    logger.info(f"使用快照: {snapshot_path}")
+                else:
+                    logger.info(f"本地缓存不完整，缺少文件: {missing_files}，将从远程下载")
+            else:
+                logger.info(f"本地缓存无快照，将从远程下载")
+        else:
+            logger.info(f"本地未找到模型缓存，将从远程下载")
+        
+        # 检查是否有本地缓存
+        has_local_cache = model_cache_path.exists() and snapshots_path.exists() and any(snapshots_path.iterdir())
+        
+        # 第一次尝试：优先使用本地缓存
+        if has_local_cache:
+            try:
+                logger.info("尝试使用本地模型缓存，禁用网络下载")
+                self.model = SentenceTransformer(
+                    self.model_name, 
+                    device=self.device,
+                    cache_folder=str(cache_folder),
+                    local_files_only=True
+                )
+                logger.info(f"句子转换器模型加载成功（本地缓存）")
+                return
+            except Exception as e:
+                logger.warning(f"本地缓存加载失败: {str(e)}，尝试网络下载")
+        
+        # 第二次尝试：网络下载
         try:
+            logger.info("尝试从网络下载模型")
             self.model = SentenceTransformer(
                 self.model_name, 
                 device=self.device,
                 cache_folder=str(cache_folder)
             )
-            logger.info(f"句子转换器模型加载成功")
+            logger.info(f"句子转换器模型加载成功（网络下载）")
             logger.info(f"模型文件已保存到: {cache_folder}")
             return
         except Exception as e:
-            logger.warning(f"使用 {self.mirror_site} 镜像加载失败: {str(e)}")
+            logger.warning(f"网络下载失败: {str(e)}")
             
             # 第二次尝试：使用官方源（仅当当前不是官方源时）
             if self.mirror_site != "official":

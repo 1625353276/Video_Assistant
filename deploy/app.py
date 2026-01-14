@@ -11,7 +11,6 @@ import sys
 import time
 import json
 import tempfile
-import threading
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Any
 
@@ -85,6 +84,18 @@ try:
 except ImportError as e:
     print(f"✗ HybridRetriever 导入失败: {e}")
     MOCK_MODE = True
+
+try:
+    from modules.utils.video_cleaner import register_video_cleanup, get_video_cleanup_info, cleanup_videos_now
+    print("✓ VideoCleaner 导入成功")
+    # 注册退出时清理视频文件
+    register_video_cleanup()
+    print("✓ 视频清理功能已启用，程序退出时将自动清理上传的视频文件")
+except ImportError as e:
+    print(f"✗ VideoCleaner 导入失败: {e}")
+    register_video_cleanup = None
+    get_video_cleanup_info = None
+    cleanup_videos_now = None
 
 if MOCK_MODE:
     print(f"\n警告：将在模拟模式下运行")
@@ -191,56 +202,6 @@ class VideoAssistant:
         self.whisper_asr = WhisperASR(model_size="base")
         self.file_manager = FileManager()
         
-        # 添加索引构建锁，确保线程安全
-        self.index_lock = threading.Lock()
-        self.building_indices = set()  # 正在构建索引的视频ID集合
-    
-    def _create_error_result(self, error_message: str, error_type: str = "general") -> List[Dict]:
-        """
-        创建统一的错误结果格式
-        
-        Args:
-            error_message: 错误信息
-            error_type: 错误类型
-            
-        Returns:
-            List[Dict]: 统一格式的错误结果
-        """
-        return [{
-            "text": error_message,
-            "timestamp": 0.0,
-            "score": 0.0,
-            "type": "error",
-            "error_type": error_type,
-            "error_message": error_message
-        }]
-    
-    def _create_success_result(self, doc: Dict, score: float, result_type: str, **kwargs) -> Dict:
-        """
-        创建统一的成功结果格式
-        
-        Args:
-            doc: 文档数据
-            score: 相关性分数
-            result_type: 结果类型 (vector/bm25/hybrid)
-            **kwargs: 额外字段
-            
-        Returns:
-            Dict: 统一格式的结果
-        """
-        result = {
-            "text": doc.get("text", ""),
-            "timestamp": doc.get("start", 0.0),
-            "score": round(score, 3),
-            "end": doc.get("end", 0.0),
-            "type": result_type
-        }
-        
-        # 添加额外字段
-        result.update(kwargs)
-        
-        return result
-        
         # 初始化翻译器和检索器
         if not MOCK_MODE:
             try:
@@ -291,54 +252,6 @@ class VideoAssistant:
         os.makedirs("data/transcripts", exist_ok=True)
         os.makedirs("data/temp", exist_ok=True)
         os.makedirs("data/vectors", exist_ok=True)
-    
-    def get_retriever_status(self) -> Dict:
-        """
-        获取检索器状态信息
-        
-        Returns:
-            Dict: 检索器状态信息
-        """
-        # 使用hasattr检查属性是否存在，避免模拟模式下的错误
-        status = {
-            "vector_available": hasattr(self, 'vector_store') and self.vector_store is not None,
-            "bm25_available": hasattr(self, 'bm25_retriever') and self.bm25_retriever is not None,
-            "hybrid_available": hasattr(self, 'hybrid_retriever') and self.hybrid_retriever is not None,
-            "available_search_types": []
-        }
-        
-        # 确定可用的搜索类型
-        if status["vector_available"]:
-            status["available_search_types"].append(("向量检索", "vector"))
-        if status["bm25_available"]:
-            status["available_search_types"].append(("关键词检索 (BM25)", "bm25"))
-        if status["hybrid_available"]:
-            status["available_search_types"].append(("混合检索 (推荐)", "hybrid"))
-        
-        # 如果没有可用的检索器，提供模拟选项
-        if not status["available_search_types"]:
-            status["available_search_types"].append(("模拟检索 (演示)", "mock"))
-        
-        # 获取检索器统计信息
-        if status["vector_available"]:
-            try:
-                status["vector_stats"] = self.vector_store.get_stats()
-            except Exception as e:
-                status["vector_stats"] = {"error": str(e)}
-        
-        if status["bm25_available"]:
-            try:
-                status["bm25_stats"] = self.bm25_retriever.get_stats()
-            except Exception as e:
-                status["bm25_stats"] = {"error": str(e)}
-        
-        if status["hybrid_available"]:
-            try:
-                status["hybrid_stats"] = self.hybrid_retriever.get_stats()
-            except Exception as e:
-                status["hybrid_stats"] = {"error": str(e)}
-        
-        return status
     
     def upload_and_process_video(self, video_file, user_id=None):
         """
@@ -572,14 +485,8 @@ class VideoAssistant:
         if not video_info.get("transcript"):
             return {"error": "视频尚未处理完成"}
         
-        if not (hasattr(self, 'vector_store') and self.vector_store) or not (hasattr(self, 'bm25_retriever') and self.bm25_retriever):
+        if not self.vector_store or not self.bm25_retriever:
             return {"error": "检索器未初始化"}
-        
-        # 检查是否正在构建索引
-        with self.index_lock:
-            if video_id in self.building_indices:
-                return {"error": "该视频正在构建索引，请稍后再试"}
-            self.building_indices.add(video_id)
         
         try:
             transcript = video_info["transcript"]
@@ -595,26 +502,24 @@ class VideoAssistant:
                 }
                 documents.append(doc)
             
-            # 使用锁保护索引构建过程
-            with self.index_lock:
-                # 构建向量索引
-                self.vector_store.clear()
-                self.vector_store.add_documents(documents, text_field="text")
-                vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
-                self.vector_store.save_index(vector_index_path)
-                
-                # 构建BM25索引
-                self.bm25_retriever.clear()
-                self.bm25_retriever.add_documents(documents, text_field="text")
-                bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
-                self.bm25_retriever.save_index(bm25_index_path)
-                
-                # 如果有混合检索器，也添加文档
-                if self.hybrid_retriever:
-                    self.hybrid_retriever.clear()
-                    self.hybrid_retriever.add_documents(documents, text_field="text")
-                    hybrid_index_path = f"data/vectors/{video_id}_hybrid_index.pkl"
-                    self.hybrid_retriever.save_indexes(vector_index_path, bm25_index_path)
+            # 构建向量索引
+            self.vector_store.clear()
+            self.vector_store.add_documents(documents, text_field="text")
+            vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
+            self.vector_store.save_index(vector_index_path)
+            
+            # 构建BM25索引
+            self.bm25_retriever.clear()
+            self.bm25_retriever.add_documents(documents, text_field="text")
+            bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
+            self.bm25_retriever.save_index(bm25_index_path)
+            
+            # 如果有混合检索器，也添加文档
+            if self.hybrid_retriever:
+                self.hybrid_retriever.clear()
+                self.hybrid_retriever.add_documents(documents, text_field="text")
+                hybrid_index_path = f"data/vectors/{video_id}_hybrid_index.pkl"
+                self.hybrid_retriever.save_indexes(vector_index_path, bm25_index_path)
             
             video_info["vector_index_built"] = True
             video_info["vector_index_path"] = vector_index_path
@@ -629,10 +534,6 @@ class VideoAssistant:
             }
         except Exception as e:
             return {"error": f"构建索引失败: {str(e)}"}
-        finally:
-            # 确保从构建集合中移除
-            with self.index_lock:
-                self.building_indices.discard(video_id)
     
     def search_in_video(self, video_id, query, max_results=5, threshold=0.3, search_type="hybrid"):
         """
@@ -646,87 +547,71 @@ class VideoAssistant:
             search_type: 搜索类型 ("vector", "bm25", "hybrid")
         """
         if video_id not in video_data:
-            return self._create_error_result("视频不存在", "video_not_found")
+            return []
         
         video_info = video_data[video_id]
         
         if not video_info.get("vector_index_built"):
             # 如果没有构建索引，先尝试构建
             if video_info.get("transcript"):
-                build_result = self.build_vector_index(video_id)
-                if "error" in build_result:
-                    return self._create_error_result(f"索引构建失败: {build_result['error']}", "index_build_failed")
+                self.build_vector_index(video_id)
             else:
-                return self._create_error_result("视频尚未处理完成，无法搜索", "video_not_processed")
+                return [{"text": "视频尚未处理完成，无法搜索", "timestamp": 0.0, "score": 0.0, "type": "error"}]
         
         try:
             results = []
             
             # 根据搜索类型执行不同的搜索
-            if search_type == "vector" and hasattr(self, 'vector_store') and self.vector_store:
+            if search_type == "vector" and self.vector_store:
                 # 向量搜索
                 vector_results = self.vector_store.search(query, top_k=max_results, threshold=threshold)
                 for result in vector_results:
-                    doc = result.get("document", {})
-                    similarity = result.get("similarity", 0.0)
-                    results.append(self._create_success_result(
-                        doc, similarity, "vector", similarity=round(similarity, 3)
-                    ))
+                    doc = result["document"]
+                    results.append({
+                        "text": doc["text"],
+                        "timestamp": doc["start"],
+                        "score": round(result["similarity"], 3),
+                        "end": doc["end"],
+                        "type": "vector",
+                        "similarity": round(result["similarity"], 3)
+                    })
             
-            elif search_type == "bm25" and hasattr(self, 'bm25_retriever') and self.bm25_retriever:
+            elif search_type == "bm25" and self.bm25_retriever:
                 # BM25搜索
                 bm25_results = self.bm25_retriever.search(query, top_k=max_results, threshold=threshold)
                 for result in bm25_results:
-                    doc = result.get("document", {})
-                    score = result.get("score", 0.0)
-                    results.append(self._create_success_result(
-                        doc, score, "bm25", bm25_score=round(score, 3)
-                    ))
+                    doc = result["document"]
+                    results.append({
+                        "text": doc["text"],
+                        "timestamp": doc["start"],
+                        "score": round(result["score"], 3),
+                        "end": doc["end"],
+                        "type": "bm25",
+                        "bm25_score": round(result["score"], 3)
+                    })
             
-            elif search_type == "hybrid" and hasattr(self, 'hybrid_retriever') and self.hybrid_retriever:
+            elif search_type == "hybrid" and self.hybrid_retriever:
                 # 混合搜索
                 hybrid_results = self.hybrid_retriever.search(query, top_k=max_results, threshold=threshold)
                 for result in hybrid_results:
-                    doc = result.get("document", {})
-                    score = result.get("score", 0.0)
-                    vector_score = result.get("vector_score", 0.0)
-                    bm25_score = result.get("bm25_score", 0.0)
-                    results.append(self._create_success_result(
-                        doc, score, "hybrid", 
-                        vector_score=round(vector_score, 3),
-                        bm25_score=round(bm25_score, 3)
-                    ))
-            
-            elif search_type == "mock":
-                # 模拟搜索结果
-                mock_results = [
-                    {"text": f"这是关于'{query}'的模拟搜索结果1", "timestamp": 10.5, "score": 0.95},
-                    {"text": f"这是关于'{query}'的模拟搜索结果2", "timestamp": 25.3, "score": 0.87},
-                    {"text": f"这是关于'{query}'的模拟搜索结果3", "timestamp": 42.1, "score": 0.78}
-                ]
-                for result in mock_results:
-                    results.append(self._create_success_result(
-                        result, result["score"], "mock"
-                    ))
+                    doc = result["document"]
+                    results.append({
+                        "text": doc["text"],
+                        "timestamp": doc["start"],
+                        "score": round(result["score"], 3),
+                        "end": doc["end"],
+                        "type": "hybrid",
+                        "vector_score": round(result.get("vector_score", 0), 3),
+                        "bm25_score": round(result.get("bm25_score", 0), 3)
+                    })
             
             else:
-                available_retrievers = []
-                if hasattr(self, 'vector_store') and self.vector_store:
-                    available_retrievers.append("vector")
-                if hasattr(self, 'bm25_retriever') and self.bm25_retriever:
-                    available_retrievers.append("bm25")
-                if hasattr(self, 'hybrid_retriever') and self.hybrid_retriever:
-                    available_retrievers.append("hybrid")
-                
-                return self._create_error_result(
-                    f"检索器未初始化或不支持搜索类型: {search_type}。可用检索器: {', '.join(available_retrievers)}", 
-                    "retriever_unavailable"
-                )
+                return [{"text": f"检索器未初始化或不支持搜索类型: {search_type}", "timestamp": 0.0, "score": 0.0, "type": "error"}]
             
             return results
             
         except Exception as e:
-            return self._create_error_result(f"搜索失败: {str(e)}", "search_failed")
+            return [{"text": f"搜索失败: {str(e)}", "timestamp": 0.0, "score": 0.0, "type": "error"}]
     
     def build_index_background(self, video_id):
         """后台构建向量索引"""
@@ -738,14 +623,8 @@ class VideoAssistant:
         if not video_info.get("transcript"):
             return {"error": "视频尚未处理完成"}
         
-        if not (hasattr(self, 'vector_store') and self.vector_store) or not (hasattr(self, 'bm25_retriever') and self.bm25_retriever):
+        if not self.vector_store or not self.bm25_retriever:
             return {"error": "检索器未初始化"}
-        
-        # 检查是否正在构建索引
-        with self.index_lock:
-            if video_id in self.building_indices:
-                return {"error": "该视频正在构建索引，请稍后再试"}
-            self.building_indices.add(video_id)
         
         try:
             transcript = video_info["transcript"]
@@ -761,26 +640,24 @@ class VideoAssistant:
                 }
                 documents.append(doc)
             
-            # 使用锁保护索引构建过程
-            with self.index_lock:
-                # 构建向量索引
-                self.vector_store.clear()
-                self.vector_store.add_documents(documents, text_field="text")
-                vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
-                self.vector_store.save_index(vector_index_path)
-                
-                # 构建BM25索引
-                self.bm25_retriever.clear()
-                self.bm25_retriever.add_documents(documents, text_field="text")
-                bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
-                self.bm25_retriever.save_index(bm25_index_path)
-                
-                # 如果有混合检索器，也添加文档
-                if self.hybrid_retriever:
-                    self.hybrid_retriever.clear()
-                    self.hybrid_retriever.add_documents(documents, text_field="text")
-                    hybrid_index_path = f"data/vectors/{video_id}_hybrid_index.pkl"
-                    self.hybrid_retriever.save_indexes(vector_index_path, bm25_index_path)
+            # 构建向量索引
+            self.vector_store.clear()
+            self.vector_store.add_documents(documents, text_field="text")
+            vector_index_path = f"data/vectors/{video_id}_vector_index.pkl"
+            self.vector_store.save_index(vector_index_path)
+            
+            # 构建BM25索引
+            self.bm25_retriever.clear()
+            self.bm25_retriever.add_documents(documents, text_field="text")
+            bm25_index_path = f"data/vectors/{video_id}_bm25_index.pkl"
+            self.bm25_retriever.save_index(bm25_index_path)
+            
+            # 如果有混合检索器，也添加文档
+            if self.hybrid_retriever:
+                self.hybrid_retriever.clear()
+                self.hybrid_retriever.add_documents(documents, text_field="text")
+                hybrid_index_path = f"data/vectors/{video_id}_hybrid_index.pkl"
+                self.hybrid_retriever.save_indexes(vector_index_path, bm25_index_path)
             
             video_info["vector_index_built"] = True
             video_info["vector_index_path"] = vector_index_path
@@ -797,10 +674,6 @@ class VideoAssistant:
         except Exception as e:
             video_info["index_building"] = False
             return {"error": f"构建索引失败: {str(e)}"}
-        finally:
-            # 确保从构建集合中移除
-            with self.index_lock:
-                self.building_indices.discard(video_id)
     
     def translate_background(self, video_id, target_lang):
         """后台翻译处理"""
@@ -1001,9 +874,21 @@ def create_video_qa_interface():
         if not video_data[video_id].get("transcript"):
             return "视频尚未转录完成，无法构建索引", gr.Textbox(visible=False), gr.HTML(visible=False)
         
-        # 返回开始构建的状态
+        # 设置构建状态
         video_data[video_id]["index_building"] = True
-        return "正在构建检索索引，请稍候...", gr.Textbox(value="⏳ 正在构建向量索引和BM25索引...", visible=True), gr.HTML(value="<div style='width:100%; background-color:#fff3cd; border-radius:5px; padding:5px; text-align:center;'>⏳ 正在构建索引...</div>", visible=True)
+
+        # 实际执行构建索引
+        try:
+            result = assistant.build_index_background(video_id)
+            if "error" in result:
+                video_data[video_id]["index_building"] = False
+                return f"构建失败: {result['error']}", gr.Textbox(visible=False), gr.HTML(visible=False)
+            else:
+                video_data[video_id]["index_building"] = False
+                return result.get("message", "索引构建完成"), gr.Textbox(visible=False), gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ {result.get('message', '索引构建完成')}</div>", visible=True)
+        except Exception as e:
+            video_data[video_id]["index_building"] = False
+            return f"构建失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 开始新对话
     def start_new_chat():
@@ -1014,23 +899,6 @@ def create_video_qa_interface():
         videos = assistant.get_video_list()
         choices = [f"{v['video_id']}: {v['filename']}" for v in videos]
         return gr.Dropdown(choices=choices, value=choices[0] if choices else None)
-    
-    # 更新搜索类型选项
-    def update_search_type_options():
-        retriever_status = assistant.get_retriever_status()
-        available_types = retriever_status["available_search_types"]
-        
-        # 默认选择混合检索（如果可用），否则选择第一个可用的
-        default_value = "hybrid"
-        if not any(choice[1] == "hybrid" for choice in available_types):
-            default_value = available_types[0][1] if available_types else None
-        
-        return gr.Radio(
-            choices=available_types,
-            value=default_value,
-            label="搜索类型",
-            info="混合检索结合了语义相似度和关键词匹配" if retriever_status["hybrid_available"] else "根据可用的检索器显示选项"
-        )
     
     # 创建界面
     with gr.Blocks(title="视频智能问答助手") as demo:
@@ -1131,9 +999,13 @@ def create_video_qa_interface():
                         visible=False
                     )
                             
-                            # 搜索类型选择 - 将在页面加载时动态更新
+                            # 搜索类型选择
                             search_type = gr.Radio(
-                                choices=[("混合检索 (推荐)", "hybrid")],
+                                choices=[
+                                    ("混合检索 (推荐)", "hybrid"),
+                                    ("向量检索", "vector"),
+                                    ("关键词检索 (BM25)", "bm25")
+                                ],
                                 value="hybrid",
                                 label="搜索类型",
                                 info="混合检索结合了语义相似度和关键词匹配"
@@ -1262,14 +1134,14 @@ def create_video_qa_interface():
         
         # 刷新视频列表
         refresh_btn.click(
-            lambda: (update_video_selector(), update_search_type_options()),
-            outputs=[video_selector, search_type]
+            update_video_selector,
+            outputs=[video_selector]
         )
         
-        # 页面加载时更新视频列表和搜索类型选项
+        # 页面加载时更新视频列表
         demo.load(
-            lambda: (update_video_selector(), update_search_type_options()),
-            outputs=[video_selector, search_type]
+            update_video_selector,
+            outputs=[video_selector]
         )
     
     return demo
