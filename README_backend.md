@@ -152,7 +152,7 @@ Whisper直接输出的原始转录结果，包含完整的语音识别信息。
     "original_text": "清洗后的转写文本...",
     "source_lang": "zh",
     "target_lang": "en",
-    "method": "googletrans"
+    "method": "deep-translator"
   }
 }
 ```
@@ -449,7 +449,7 @@ segments = segmenter.segment_by_semantic(text, similarity_threshold=0.3)
 #### 翻译配置
 ```python
 # 使用Google翻译
-translator = TextTranslator(default_method="googletrans")
+translator = TextTranslator(default_method="deep-translator")
 
 # 使用模拟翻译（用于测试）
 translator = TextTranslator(default_method="mock")

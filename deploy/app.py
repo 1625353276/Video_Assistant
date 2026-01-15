@@ -243,7 +243,7 @@ class VideoAssistant:
                     default_method="deep-translator",
                     progress_callback=self._on_translation_progress
                 )
-                print("✓ 翻译器初始化成功")
+                print("✓ 翻译器初始化成功（使用deep-translator）")
             except Exception as e:
                 print(f"⚠ 翻译器初始化失败，使用模拟模式: {e}")
                 self.translator = None
@@ -1015,7 +1015,12 @@ def create_video_qa_interface():
                 gr.JSON(visible=False),
                 gr.Textbox(visible=False),
                 gr.Row(visible=False),
-                gr.Textbox(visible=False)
+                gr.Textbox(visible=False),
+                gr.Textbox(visible=False),  # 转录文本
+                gr.Button(visible=False),  # 翻译按钮
+                gr.Dropdown(visible=False),  # 语言选择
+                gr.Textbox(visible=False),  # 翻译结果
+                gr.HTML(visible=False)  # 翻译进度条
             )
         
         return (
@@ -1025,7 +1030,12 @@ def create_video_qa_interface():
             gr.Textbox(value="正在处理视频...", visible=True),
             gr.Row(visible=True),  # 显示处理日志区域
             gr.Textbox(value=f"[{time.strftime('%H:%M:%S')}] 开始处理: {result['filename']}", visible=True),
-            gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>处理进度: 0%</div>", visible=True)
+            gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>处理进度: 0%</div>", visible=True),
+            gr.Textbox(visible=False),  # 隐藏转录文本
+            gr.Button(visible=False),  # 隐藏翻译按钮
+            gr.Dropdown(visible=False),  # 隐藏语言选择
+            gr.Textbox(visible=False),  # 隐藏翻译结果
+            gr.HTML(visible=False)  # 隐藏翻译进度条
         )
     
     # 更新处理进度
@@ -1213,11 +1223,18 @@ def create_video_qa_interface():
         video_id = video_info["video_id"]
         
         # 检查是否正在翻译
-        if video_id not in video_data or not video_data[video_id].get("translating", False):
+        if video_id not in globals()['video_data'] or not globals()['video_data'][video_id].get("translating", False):
             return gr.HTML(visible=False)
         
+        # 获取当前视频使用的助手配置
+        if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
         # 获取翻译进度
-        progress_info = assistant.get_translation_progress(video_id)
+        progress_info = current_assistant.get_translation_progress(video_id)
         progress_percent = int(progress_info["progress"] * 100)
         message = progress_info["message"]
         
@@ -1247,27 +1264,34 @@ def create_video_qa_interface():
         video_id = video_selector.split(":")[0].strip()
         
         # 检查视频是否存在
-        if video_id not in video_data:
+        if video_id not in globals()['video_data']:
             return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         # 检查转录是否完成
-        if not video_data[video_id].get("transcript"):
+        if not globals()['video_data'][video_id].get("transcript"):
             return "视频尚未转录完成，无法构建索引", gr.Textbox(visible=False), gr.HTML(visible=False)
         
+        # 获取当前视频使用的助手配置
+        if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
         # 设置构建状态
-        video_data[video_id]["index_building"] = True
+        globals()['video_data'][video_id]["index_building"] = True
 
         # 实际执行构建索引
         try:
-            result = assistant.build_index_background(video_id)
+            result = current_assistant.build_index_background(video_id)
             if "error" in result:
-                video_data[video_id]["index_building"] = False
+                globals()['video_data'][video_id]["index_building"] = False
                 return f"构建失败: {result['error']}", gr.Textbox(visible=False), gr.HTML(visible=False)
             else:
-                video_data[video_id]["index_building"] = False
+                globals()['video_data'][video_id]["index_building"] = False
                 return result.get("message", "索引构建完成"), gr.Textbox(visible=False), gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ {result.get('message', '索引构建完成')}</div>", visible=True)
         except Exception as e:
-            video_data[video_id]["index_building"] = False
+            globals()['video_data'][video_id]["index_building"] = False
             return f"构建失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 开始新对话
@@ -1520,7 +1544,7 @@ def create_video_qa_interface():
         upload_btn.click(
             handle_upload,
             inputs=[video_input, cuda_enabled, whisper_model],
-            outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html]
+            outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html, transcript_display, translate_btn, target_lang, translated_display, translate_progress_bar]
         )
         
         # 定时更新处理进度 - 使用Timer组件替代
