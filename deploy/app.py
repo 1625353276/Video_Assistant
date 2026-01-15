@@ -13,6 +13,7 @@ import json
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional, Any
+import torch
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -217,11 +218,19 @@ def update_translation_progress(video_id, current, total, message):
 class VideoAssistant:
     """视频助手主类"""
     
-    def __init__(self):
-        """初始化视频助手"""
+    def __init__(self, cuda_enabled=True, whisper_model="base"):
+        """初始化视频助手
+        
+        Args:
+            cuda_enabled: 是否启用CUDA加速
+            whisper_model: Whisper模型大小
+        """
         self.video_loader = VideoLoader()
         self.audio_extractor = AudioExtractor()
-        self.whisper_asr = WhisperASR(model_size="base")
+        
+        # 设置设备
+        device = "cuda" if cuda_enabled and torch.cuda.is_available() else "cpu"
+        self.whisper_asr = WhisperASR(model_size=whisper_model, device=device)
         self.file_manager = FileManager()
         
         # 翻译进度跟踪
@@ -293,7 +302,7 @@ class VideoAssistant:
             video_id = self._current_translating_video_id
             update_translation_progress(video_id, current, total, message)
     
-    def upload_and_process_video(self, video_file, user_id=None):
+    def upload_and_process_video(self, video_file, user_id=None, cuda_enabled=True, whisper_model="base"):
         """
         上传视频并自动开始处理
         """
@@ -324,7 +333,10 @@ class VideoAssistant:
                 "video_info": video_info,
                 "status": "uploaded",
                 "transcript": None,
-                
+                "assistant_config": {
+                    "cuda_enabled": cuda_enabled,
+                    "whisper_model": whisper_model
+                },
                 "upload_time": time.time()
             }
             
@@ -367,7 +379,7 @@ class VideoAssistant:
         
         return processing_status[video_id]
     
-    def _continue_processing(self, video_id):
+    def _continue_processing(self, video_id, cuda_enabled=True, whisper_model="base"):
         """
         继续处理视频
         """
@@ -453,7 +465,8 @@ class VideoAssistant:
                     "video_id": video_id,
                     "filename": info["filename"],
                     "thumbnail": "",  # 可以添加缩略图生成
-                    "upload_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(info["upload_time"]))
+                    "upload_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(info["upload_time"])),
+                    "config": info.get("assistant_config", {"cuda_enabled": True, "whisper_model": "base"})
                 })
         
         return videos
@@ -973,8 +986,16 @@ class VideoAssistant:
         return []
 
 
-# 创建全局助手实例
-assistant = VideoAssistant()
+# 全局助手实例字典，支持不同配置
+assistants = {}
+default_assistant = VideoAssistant(cuda_enabled=True, whisper_model="base")
+
+def get_assistant(cuda_enabled=True, whisper_model="base"):
+    """获取或创建指定配置的助手实例"""
+    key = f"{cuda_enabled}_{whisper_model}"
+    if key not in assistants:
+        assistants[key] = VideoAssistant(cuda_enabled=cuda_enabled, whisper_model=whisper_model)
+    return assistants[key]
 
 
 # Gradio界面函数
@@ -982,8 +1003,10 @@ def create_video_qa_interface():
     """创建视频问答界面"""
     
     # 处理视频上传
-    def handle_upload(video_file):
-        result = assistant.upload_and_process_video(video_file)
+    def handle_upload(video_file, cuda_enabled, whisper_model):
+        # 获取指定配置的助手
+        current_assistant = get_assistant(cuda_enabled, whisper_model)
+        result = current_assistant.upload_and_process_video(video_file)
         
         if result["status"] == "error":
             return (
@@ -1022,7 +1045,14 @@ def create_video_qa_interface():
             )
         
         video_id = video_info["video_id"]
-        progress_info = assistant.get_processing_progress(video_id)
+        # 获取当前视频使用的助手配置
+        if video_id in video_data and "assistant_config" in video_data[video_id]:
+            config = video_data[video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
+        progress_info = current_assistant.get_processing_progress(video_id)
         
         log_text = "\n".join(progress_info["log_messages"])
         progress_percent = int(progress_info["progress"] * 100)
@@ -1073,8 +1103,15 @@ def create_video_qa_interface():
         
         video_id = video_selector.split(":")[0].strip()  # 假设格式为 "video_id: filename"
         
+        # 获取当前视频使用的助手配置
+        if video_id in video_data and "assistant_config" in video_data[video_id]:
+            config = video_data[video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
         # 调用对话功能
-        answer, updated_history = assistant.chat_with_video(video_id, question, history)
+        answer, updated_history = current_assistant.chat_with_video(video_id, question, history)
         
         # 确保历史记录格式正确
         if not isinstance(updated_history, list):
@@ -1096,7 +1133,15 @@ def create_video_qa_interface():
             return []
         
         video_id = video_selector.split(":")[0].strip()
-        results = assistant.search_in_video(video_id, query, search_type=search_type)
+        
+        # 获取当前视频使用的助手配置
+        if video_id in video_data and "assistant_config" in video_data[video_id]:
+            config = video_data[video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
+        results = current_assistant.search_in_video(video_id, query, search_type=search_type)
         
         formatted_results = []
         for r in results:
@@ -1124,6 +1169,13 @@ def create_video_qa_interface():
         if video_id not in video_data:
             return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
         
+        # 获取当前视频使用的助手配置
+        if "assistant_config" in video_data[video_id]:
+            config = video_data[video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
         # 检查转录是否完成
         if not video_data[video_id].get("transcript"):
             return "视频尚未转录完成，无法翻译", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
@@ -1133,7 +1185,7 @@ def create_video_qa_interface():
         
         # 实际执行翻译
         try:
-            result = assistant.translate_transcript(video_id, target_lang)
+            result = current_assistant.translate_transcript(video_id, target_lang)
             
             if "error" in result:
                 video_data[video_id]["translating"] = False
@@ -1223,7 +1275,15 @@ def create_video_qa_interface():
         """开始新对话"""
         if video_selector:
             video_id = video_selector.split(":")[0].strip()
-            assistant.clear_conversation(video_id)
+            
+            # 获取当前视频使用的助手配置
+            if video_id in video_data and "assistant_config" in video_data[video_id]:
+                config = video_data[video_id]["assistant_config"]
+                current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+            else:
+                current_assistant = default_assistant
+            
+            current_assistant.clear_conversation(video_id)
         return [], ""
     
     # 自动构建索引函数
@@ -1249,9 +1309,16 @@ def create_video_qa_interface():
         # 设置构建状态
         video_data[video_id]["index_building"] = True
         
+        # 获取当前视频使用的助手配置
+        if video_id in video_data and "assistant_config" in video_data[video_id]:
+            config = video_data[video_id]["assistant_config"]
+            current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
+        else:
+            current_assistant = default_assistant
+        
         # 实际执行构建索引
         try:
-            result = assistant.build_index_background(video_id)
+            result = current_assistant.build_index_background(video_id)
             if "error" in result:
                 video_data[video_id]["index_building"] = False
                 return f"构建失败: {result['error']}", gr.HTML(visible=False)
@@ -1264,7 +1331,7 @@ def create_video_qa_interface():
     
     # 更新视频选择器
     def update_video_selector():
-        videos = assistant.get_video_list()
+        videos = default_assistant.get_video_list()
         choices = [f"{v['video_id']}: {v['filename']}" for v in videos]
         return gr.Dropdown(choices=choices, value=choices[0] if choices else None)
     
@@ -1290,6 +1357,28 @@ def create_video_qa_interface():
                             file_types=[".mp4", ".avi", ".mov", ".mkv"],
                             type="filepath"
                         )
+                        
+                        # 处理选项
+                        with gr.Accordion("处理选项", open=True):
+                            cuda_enabled = gr.Checkbox(
+                                label="启用CUDA加速（如果可用）",
+                                value=True,
+                                info="使用GPU加速处理，需要NVIDIA显卡和支持CUDA"
+                            )
+                            
+                            whisper_model = gr.Dropdown(
+                                choices=[
+                                    ("tiny (75MB, 最快)", "tiny"),
+                                    ("base (142MB, 平衡)", "base"),
+                                    ("small (466MB, 较准确)", "small"),
+                                    ("medium (1.5GB, 很准确)", "medium"),
+                                    ("large (2.9GB, 最准确)", "large")
+                                ],
+                                value="base",
+                                label="Whisper模型选择",
+                                info="更大的模型更准确但需要更多时间和资源"
+                            )
+                        
                         upload_btn = gr.Button("上传并处理视频", variant="primary")
 
                         # 处理日志和进度 - 移动到上传列
@@ -1430,7 +1519,7 @@ def create_video_qa_interface():
         # 事件绑定
         upload_btn.click(
             handle_upload,
-            inputs=[video_input],
+            inputs=[video_input, cuda_enabled, whisper_model],
             outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html]
         )
         
@@ -1515,7 +1604,7 @@ def create_video_qa_interface():
         
         # 刷新视频列表
         def refresh_video_list():
-            videos = assistant.get_video_list()
+            videos = default_assistant.get_video_list()
             choices = [f"{v['video_id']}: {v['filename']}" for v in videos]
             dropdown = gr.Dropdown(choices=choices, value=choices[0] if choices else None)
             
