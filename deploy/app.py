@@ -1017,7 +1017,8 @@ def create_video_qa_interface():
                 gr.Textbox(visible=False),
                 gr.Textbox(value="等待上传视频...", visible=True),
                 gr.HTML(value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待处理...</div>", visible=False),
-                gr.HTML(visible=False)  # 翻译进度条
+                gr.HTML(visible=False),  # 翻译进度条
+                gr.Textbox(visible=False)  # 索引状态
             )
         
         video_id = video_info["video_id"]
@@ -1031,15 +1032,19 @@ def create_video_qa_interface():
             video_data = assistant.get_video_info(video_id)
             transcript = video_data.get("transcript", {}).get("text", "")
             
+            # 自动构建索引
+            index_status, _ = auto_build_index(f"{video_id}: {video_data.get('filename', 'Unknown')}")
+            
             return (
                 log_text,
                 gr.Textbox(value=transcript, visible=True),
                 gr.Button(visible=True),  # 显示翻译按钮
                 gr.Dropdown(visible=True),  # 显示语言选择
                 gr.Textbox(visible=True),  # 显示翻译结果区域
-                gr.Textbox(value="✅ 处理完成！现在可以进行翻译和构建检索索引", visible=True),
+                gr.Textbox(value="✅ 处理完成！现在可以进行翻译和内容搜索", visible=True),
                 gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 处理完成！</div>", visible=True),
-                gr.HTML(visible=False)  # 隐藏翻译进度条
+                gr.HTML(visible=False),  # 隐藏翻译进度条
+                gr.Textbox(value=index_status, visible=True)  # 显示索引状态
             )
         
         return (
@@ -1051,7 +1056,8 @@ def create_video_qa_interface():
             gr.Textbox(visible=False),
             gr.Textbox(value=f"⏳ {progress_info['current_step']} ({progress_percent}%)", visible=True),
             gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>⏳ {progress_info['current_step']} ({progress_percent}%)</div>", visible=True),
-            gr.HTML(visible=False)  # 隐藏翻译进度条
+            gr.HTML(visible=False),  # 隐藏翻译进度条
+            gr.Textbox(visible=False)  # 索引状态
         )
     
     # 处理问答
@@ -1220,6 +1226,42 @@ def create_video_qa_interface():
             assistant.clear_conversation(video_id)
         return [], ""
     
+    # 自动构建索引函数
+    def auto_build_index(video_selector):
+        """自动为选中的视频构建索引"""
+        if not video_selector:
+            return "", gr.HTML(visible=False)
+        
+        video_id = video_selector.split(":")[0].strip()
+        
+        # 检查视频是否存在
+        if video_id not in video_data:
+            return "", gr.HTML(visible=False)
+        
+        # 检查转录是否完成
+        if not video_data[video_id].get("transcript"):
+            return "", gr.HTML(visible=False)
+        
+        # 检查索引是否已经构建
+        if video_data[video_id].get("vector_index_built", False):
+            return "索引已存在", gr.HTML(visible=False)
+        
+        # 设置构建状态
+        video_data[video_id]["index_building"] = True
+        
+        # 实际执行构建索引
+        try:
+            result = assistant.build_index_background(video_id)
+            if "error" in result:
+                video_data[video_id]["index_building"] = False
+                return f"构建失败: {result['error']}", gr.HTML(visible=False)
+            else:
+                video_data[video_id]["index_building"] = False
+                return result.get("message", "索引构建完成"), gr.HTML(visible=False)
+        except Exception as e:
+            video_data[video_id]["index_building"] = False
+            return f"构建失败: {str(e)}", gr.HTML(visible=False)
+    
     # 更新视频选择器
     def update_video_selector():
         videos = assistant.get_video_list()
@@ -1227,7 +1269,12 @@ def create_video_qa_interface():
         return gr.Dropdown(choices=choices, value=choices[0] if choices else None)
     
     # 创建界面
-    with gr.Blocks(title="视频智能问答助手") as demo:
+    with gr.Blocks(title="视频智能问答助手", css="""
+    .scrollable-textbox textarea {
+        overflow-y: scroll !important;
+        max-height: 300px !important;
+    }
+    """) as demo:
         gr.Markdown("# 🎥 视频智能问答助手")
         gr.Markdown("上传视频，进行智能问答")
         
@@ -1270,7 +1317,9 @@ def create_video_qa_interface():
                         label="转录文本",
                         lines=10,
                         interactive=False,
-                        visible=False
+                        visible=False,
+                        max_lines=30,
+                        elem_classes="scrollable-textbox"
                     )
                     
                     # 翻译功能
@@ -1288,7 +1337,9 @@ def create_video_qa_interface():
                         label="翻译结果",
                         lines=10,
                         interactive=False,
-                        visible=False
+                        visible=False,
+                        max_lines=30,
+                        elem_classes="scrollable-textbox"
                     )
                     
                     # 翻译进度
@@ -1318,9 +1369,8 @@ def create_video_qa_interface():
                         
                         # 搜索功能
                         with gr.Accordion("内容搜索", open=False):
-                            # 索引构建
-                            build_index_btn = gr.Button("构建检索索引", variant="secondary", size="sm")
-                            index_status = gr.Textbox(label="索引状态", interactive=False, lines=2)
+                            # 索引状态（隐藏）
+                            index_status = gr.Textbox(label="索引状态", interactive=False, lines=2, visible=False)
                             index_progress_html = gr.HTML(
                         value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待构建索引...</div>",
                         visible=False
@@ -1389,7 +1439,7 @@ def create_video_qa_interface():
         progress_timer.tick(
             update_progress,
             inputs=[video_info],
-            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, processing_status, progress_html, translate_progress_bar]
+            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, processing_status, progress_html, translate_progress_bar, index_status]
         )
         
         # 定时检查翻译和索引构建进度
@@ -1454,12 +1504,7 @@ def create_video_qa_interface():
             outputs=[translate_progress_bar]
         )
         
-        # 构建向量索引事件
-        build_index_btn.click(
-            handle_build_index,
-            inputs=[video_selector],
-            outputs=[index_status, index_status, index_progress_html]
-        )
+        # 构建向量索引事件已移除，改为自动构建
         
         # 新对话事件
         new_chat_btn.click(
@@ -1469,9 +1514,28 @@ def create_video_qa_interface():
         )
         
         # 刷新视频列表
+        def refresh_video_list():
+            videos = assistant.get_video_list()
+            choices = [f"{v['video_id']}: {v['filename']}" for v in videos]
+            dropdown = gr.Dropdown(choices=choices, value=choices[0] if choices else None)
+            
+            # 如果有视频，自动为第一个视频构建索引
+            if choices:
+                first_video = choices[0]
+                index_status, _ = auto_build_index(first_video)
+                return dropdown, gr.Textbox(value=index_status, visible=True)
+            return dropdown, gr.Textbox(visible=False)
+        
         refresh_btn.click(
-            update_video_selector,
-            outputs=[video_selector]
+            refresh_video_list,
+            outputs=[video_selector, index_status]
+        )
+        
+        # 视频选择时自动构建索引
+        video_selector.change(
+            lambda x: auto_build_index(x)[0],  # 只返回状态文本
+            inputs=[video_selector],
+            outputs=[index_status]
         )
         
         # 页面加载时更新视频列表
