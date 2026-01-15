@@ -26,18 +26,7 @@ except ImportError:
     HAS_REQUESTS = False
     print("警告: requests 未安装，部分功能可能不可用")
 
-try:
-    from googletrans import Translator
-
-    HAS_GOOGLETRANS = True
-    # 检查 googletrans 版本
-    import googletrans
-
-    GOOGLETRANS_VERSION = getattr(googletrans, '__version__', 'unknown')
-except ImportError:
-    HAS_GOOGLETRANS = False
-    GOOGLETRANS_VERSION = None
-    print("警告: googletrans 未安装，将使用模拟翻译")
+# 不再使用googletrans，改用deep-translator
 
 try:
     from deep_translator import GoogleTranslator
@@ -68,7 +57,7 @@ class TextTranslator:
         初始化翻译器
 
         Args:
-            default_method: 翻译方法 ("auto", "googletrans", "deep-translator", "mock")
+            default_method: 翻译方法 ("auto", "deep-translator", "mock")
             progress_callback: 进度回调函数，接收(current, total, message)参数
         """
         self.default_method = self._determine_best_method(default_method)
@@ -85,23 +74,12 @@ class TextTranslator:
         # 自动选择最佳方法
         if HAS_DEEP_TRANSLATOR:
             return "deep-translator"
-        elif HAS_GOOGLETRANS:
-            return "googletrans"
         else:
             return "mock"
 
     def _init_translator(self):
         """初始化翻译器实例"""
-        if self.default_method == "googletrans" and HAS_GOOGLETRANS:
-            try:
-                # 新版 googletrans 的初始化
-                self.translator = Translator()
-                print(f"✓ 使用 googletrans (版本: {GOOGLETRANS_VERSION})")
-            except Exception as e:
-                print(f"✗ 初始化 googletrans 失败: {e}")
-                self.default_method = "mock"
-
-        elif self.default_method == "deep-translator" and HAS_DEEP_TRANSLATOR:
+        if self.default_method == "deep-translator" and HAS_DEEP_TRANSLATOR:
             try:
                 # deep-translator 不需要预初始化
                 self.translator = "deep-translator"
@@ -138,19 +116,6 @@ class TextTranslator:
         """
         if not text or not text.strip():
             return "unknown"
-
-        # 如果使用 googletrans，使用其检测功能
-        if self.default_method == "googletrans" and self.translator:
-            try:
-                detection = self.translator.detect(text)
-                if detection.confidence > 0.5:
-                    lang = detection.lang
-                    if lang.startswith('zh'):
-                        return "zh"
-                    elif lang.startswith('en'):
-                        return "en"
-            except Exception as e:
-                print(f"语言检测失败: {e}")
 
         # 简单的语言检测
         chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
@@ -210,9 +175,7 @@ class TextTranslator:
         # 执行翻译
         translation_method = self.default_method
 
-        if translation_method == "googletrans":
-            result = self._translate_with_googletrans(text, source_lang, target_lang)
-        elif translation_method == "deep-translator":
+        if translation_method == "deep-translator":
             result = self._translate_with_deeptranslator(text, source_lang, target_lang)
         else:
             result = self._translate_with_mock(text, source_lang, target_lang)
@@ -222,37 +185,7 @@ class TextTranslator:
 
         return result
 
-    def _translate_with_googletrans(self, text: str, source_lang: str,
-                                    target_lang: str) -> TranslationResult:
-        """使用 googletrans 进行翻译"""
-        try:
-            # 语言代码映射
-            lang_mapping = {
-                "zh": "zh-cn",
-                "en": "en",
-                "zh-CN": "zh-cn",
-                "zh-TW": "zh-tw"
-            }
-
-            src = lang_mapping.get(source_lang, source_lang)
-            dest = lang_mapping.get(target_lang, target_lang)
-
-            # 同步调用（新版本）
-            result = self.translator.translate(text, src=src, dest=dest)
-
-            return TranslationResult(
-                original_text=text,
-                translated_text=result.text,
-                source_lang=source_lang,
-                target_lang=target_lang,
-                confidence=getattr(result, "confidence", 0.8),
-                translation_method="googletrans"
-            )
-
-        except Exception as e:
-            print(f"Google翻译失败: {e}")
-            # 回退到模拟翻译
-            return self._translate_with_mock(text, source_lang, target_lang)
+    # 不再使用googletrans翻译
 
     def _translate_with_deeptranslator(self, text: str, source_lang: str,
                                        target_lang: str) -> TranslationResult:
@@ -441,7 +374,7 @@ class TextTranslator:
             results.append(result)
 
             # 添加延迟避免API限制
-            if self.default_method in ["googletrans", "deep-translator"]:
+            if self.default_method == "deep-translator":
                 time.sleep(0.2)  # 200ms 延迟
 
         # 更新完成进度
