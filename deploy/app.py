@@ -1046,8 +1046,8 @@ def create_video_qa_interface():
         
         video_id = video_info["video_id"]
         # 获取当前视频使用的助手配置
-        if video_id in video_data and "assistant_config" in video_data[video_id]:
-            config = video_data[video_id]["assistant_config"]
+        if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
             current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
         else:
             current_assistant = default_assistant
@@ -1059,11 +1059,11 @@ def create_video_qa_interface():
         
         if progress_info["status"] == "completed":
             # 处理完成，更新转录显示
-            video_data = assistant.get_video_info(video_id)
-            transcript = video_data.get("transcript", {}).get("text", "")
+            video_info_data = current_assistant.get_video_info(video_id)
+            transcript = video_info_data.get("transcript", {}).get("text", "")
             
             # 自动构建索引
-            index_status, _ = auto_build_index(f"{video_id}: {video_data.get('filename', 'Unknown')}")
+            index_status, _ = auto_build_index(f"{video_id}: {video_info_data.get('filename', 'Unknown')}")
             
             return (
                 log_text,
@@ -1104,8 +1104,8 @@ def create_video_qa_interface():
         video_id = video_selector.split(":")[0].strip()  # 假设格式为 "video_id: filename"
         
         # 获取当前视频使用的助手配置
-        if video_id in video_data and "assistant_config" in video_data[video_id]:
-            config = video_data[video_id]["assistant_config"]
+        if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
             current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
         else:
             current_assistant = default_assistant
@@ -1135,8 +1135,8 @@ def create_video_qa_interface():
         video_id = video_selector.split(":")[0].strip()
         
         # 获取当前视频使用的助手配置
-        if video_id in video_data and "assistant_config" in video_data[video_id]:
-            config = video_data[video_id]["assistant_config"]
+        if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
             current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
         else:
             current_assistant = default_assistant
@@ -1166,12 +1166,12 @@ def create_video_qa_interface():
         video_id = video_info["video_id"]
         
         # 检查视频是否存在
-        if video_id not in video_data:
+        if video_id not in globals()['video_data']:
             return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
         
         # 获取当前视频使用的助手配置
-        if "assistant_config" in video_data[video_id]:
-            config = video_data[video_id]["assistant_config"]
+        if "assistant_config" in globals()['video_data'][video_id]:
+            config = globals()['video_data'][video_id]["assistant_config"]
             current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
         else:
             current_assistant = default_assistant
@@ -1277,8 +1277,8 @@ def create_video_qa_interface():
             video_id = video_selector.split(":")[0].strip()
             
             # 获取当前视频使用的助手配置
-            if video_id in video_data and "assistant_config" in video_data[video_id]:
-                config = video_data[video_id]["assistant_config"]
+            if video_id in globals()['video_data'] and "assistant_config" in globals()['video_data'][video_id]:
+                config = globals()['video_data'][video_id]["assistant_config"]
                 current_assistant = get_assistant(config["cuda_enabled"], config["whisper_model"])
             else:
                 current_assistant = default_assistant
@@ -1295,19 +1295,19 @@ def create_video_qa_interface():
         video_id = video_selector.split(":")[0].strip()
         
         # 检查视频是否存在
-        if video_id not in video_data:
+        if video_id not in globals()['video_data']:
             return "", gr.HTML(visible=False)
         
         # 检查转录是否完成
-        if not video_data[video_id].get("transcript"):
+        if not globals()['video_data'][video_id].get("transcript"):
             return "", gr.HTML(visible=False)
         
         # 检查索引是否已经构建
-        if video_data[video_id].get("vector_index_built", False):
+        if globals()['video_data'][video_id].get("vector_index_built", False):
             return "索引已存在", gr.HTML(visible=False)
         
         # 设置构建状态
-        video_data[video_id]["index_building"] = True
+        globals()['video_data'][video_id]["index_building"] = True
         
         # 获取当前视频使用的助手配置
         if video_id in video_data and "assistant_config" in video_data[video_id]:
@@ -1323,10 +1323,10 @@ def create_video_qa_interface():
                 video_data[video_id]["index_building"] = False
                 return f"构建失败: {result['error']}", gr.HTML(visible=False)
             else:
-                video_data[video_id]["index_building"] = False
+                globals()['video_data'][video_id]["index_building"] = False
                 return result.get("message", "索引构建完成"), gr.HTML(visible=False)
         except Exception as e:
-            video_data[video_id]["index_building"] = False
+            globals()['video_data'][video_id]["index_building"] = False
             return f"构建失败: {str(e)}", gr.HTML(visible=False)
     
     # 更新视频选择器
