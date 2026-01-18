@@ -1042,13 +1042,11 @@ def create_video_qa_interface():
     def update_progress(video_info):
         if not video_info or "video_id" not in video_info:
             return (
-                "", 
+                "",  # processing_log内容
                 gr.Textbox(visible=False), 
                 gr.Button(visible=False), 
                 gr.Dropdown(visible=False), 
                 gr.Textbox(visible=False),  # 翻译结果区域
-                gr.Textbox(visible=False),
-                gr.Textbox(value="等待上传视频...", visible=True),
                 gr.HTML(value="<div style='width:100%; background-color:#f0f0f0; border-radius:5px; padding:5px; text-align:center;'>等待处理...</div>", visible=False),
                 gr.HTML(visible=False),  # 翻译进度条
                 gr.Textbox(visible=False)  # 索引状态
@@ -1081,7 +1079,6 @@ def create_video_qa_interface():
                 gr.Button(visible=True),  # 显示翻译按钮
                 gr.Dropdown(visible=True),  # 显示语言选择
                 gr.Textbox(visible=True),  # 显示翻译结果区域
-                gr.Textbox(value="✅ 处理完成！现在可以进行翻译和内容搜索", visible=True),
                 gr.HTML(value=f"<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 处理完成！</div>", visible=True),
                 gr.HTML(visible=False),  # 隐藏翻译进度条
                 gr.Textbox(value=index_status, visible=True)  # 显示索引状态
@@ -1093,8 +1090,6 @@ def create_video_qa_interface():
             gr.Button(visible=False),
             gr.Dropdown(visible=False),
             gr.Textbox(visible=False),  # 翻译结果区域
-            gr.Textbox(visible=False),
-            gr.Textbox(value=f"⏳ {progress_info['current_step']} ({progress_percent}%)", visible=True),
             gr.HTML(value=f"<div style='width:100%; background-color:#e6f3ff; border-radius:5px; padding:5px; text-align:center;'>⏳ {progress_info['current_step']} ({progress_percent}%)</div>", visible=True),
             gr.HTML(visible=False),  # 隐藏翻译进度条
             gr.Textbox(visible=False)  # 索引状态
@@ -1171,13 +1166,13 @@ def create_video_qa_interface():
     # 处理翻译
     def handle_translate(video_info, target_lang):
         if not video_info or "video_id" not in video_info:
-            return "请先上传并处理视频", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
+            return "请先上传并处理视频", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         video_id = video_info["video_id"]
         
         # 检查视频是否存在
         if video_id not in globals()['video_data']:
-            return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
+            return "视频不存在", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         # 获取当前视频使用的助手配置
         if "assistant_config" in globals()['video_data'][video_id]:
@@ -1188,7 +1183,7 @@ def create_video_qa_interface():
         
         # 检查转录是否完成
         if not video_data[video_id].get("transcript"):
-            return "视频尚未转录完成，无法翻译", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
+            return "视频尚未转录完成，无法翻译", gr.Textbox(visible=False), gr.HTML(visible=False)
         
         # 设置翻译状态
         video_data[video_id]["translating"] = True
@@ -1199,7 +1194,7 @@ def create_video_qa_interface():
             
             if "error" in result:
                 video_data[video_id]["translating"] = False
-                return result["error"], gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
+                return result["error"], gr.Textbox(visible=False), gr.HTML(visible=False)
             
             # 翻译成功
             translated_text = result.get("translated_text", "")
@@ -1207,13 +1202,12 @@ def create_video_qa_interface():
             return (
                 "✅ 翻译完成", 
                 gr.Textbox(value=translated_text, visible=True),
-                gr.HTML(value="<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 翻译完成</div>", visible=True),
-                gr.HTML(visible=False)  # 隐藏进度条
+                gr.HTML(value="<div style='width:100%; background-color:#d4edda; border-radius:5px; padding:5px; text-align:center;'>✅ 翻译完成</div>", visible=True)
             )
             
         except Exception as e:
             video_data[video_id]["translating"] = False
-            return f"翻译失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False), gr.HTML(visible=False)
+            return f"翻译失败: {str(e)}", gr.Textbox(visible=False), gr.HTML(visible=False)
     
     # 更新翻译进度
     def update_translation_progress(video_info):
@@ -1544,7 +1538,7 @@ def create_video_qa_interface():
         upload_btn.click(
             handle_upload,
             inputs=[video_input, cuda_enabled, whisper_model],
-            outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html, transcript_display, translate_btn, target_lang, translated_display, translate_progress_bar]
+            outputs=[upload_status, video_player, video_info, processing_status, processing_log, progress_html, transcript_display, translate_btn, target_lang, translated_display]
         )
         
         # 定时更新处理进度 - 使用Timer组件替代
@@ -1552,7 +1546,7 @@ def create_video_qa_interface():
         progress_timer.tick(
             update_progress,
             inputs=[video_info],
-            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, processing_status, progress_html, translate_progress_bar, index_status]
+            outputs=[processing_log, transcript_display, translate_btn, target_lang, translated_display, progress_html, translate_progress_bar, index_status]
         )
         
         # 定时检查翻译和索引构建进度
@@ -1630,14 +1624,13 @@ def create_video_qa_interface():
         def refresh_video_list():
             videos = default_assistant.get_video_list()
             choices = [f"{v['video_id']}: {v['filename']}" for v in videos]
-            dropdown = gr.Dropdown(choices=choices, value=choices[0] if choices else None)
             
             # 如果有视频，自动为第一个视频构建索引
             if choices:
                 first_video = choices[0]
                 index_status, _ = auto_build_index(first_video)
-                return dropdown, gr.Textbox(value=index_status, visible=True)
-            return dropdown, gr.Textbox(visible=False)
+                return gr.Dropdown(choices=choices, value=choices[0]), gr.Textbox(value=index_status, visible=True)
+            return gr.Dropdown(choices=choices, value=None), gr.Textbox(visible=False)
         
         refresh_btn.click(
             refresh_video_list,

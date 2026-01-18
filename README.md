@@ -308,23 +308,3 @@ python tests/test_retrieval_integration.py
 
 本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
 
-## 🙏 致谢
-
-- [OpenAI Whisper](https://github.com/openai/whisper) - 语音识别
-- [Sentence-Transformers](https://github.com/UKPLab/sentence-transformers) - 文本向量化
-- [FFmpeg](https://ffmpeg.org/) - 音视频处理
-- [HuggingFace Transformers](https://github.com/huggingface/transformers) - 预训练模型
-- [SciPy](https://scipy.org/) - 科学计算库
-
-## 📞 联系方式
-
-如有问题或建议，请通过以下方式联系：
-
-- 提交 [Issue](https://github.com/1625353276/Video_Assistant/issues)
-- 发送邮件至: [your-email@example.com]
-
----
-
-<div align="center">
-  <p>如果这个项目对您有帮助，请给它一个 ⭐️</p>
-</div>
