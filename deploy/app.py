@@ -86,7 +86,7 @@ def create_login_page(router):
             with gr.Column(scale=1):
                 pass  # 空白列用于居中
             with gr.Column(scale=2):
-                with gr.Tabs():
+                with gr.Tabs() as login_tabs:
                     with gr.Tab("登录"):
                         with gr.Column():
                             login_username = gr.Textbox(
@@ -102,7 +102,8 @@ def create_login_page(router):
                             login_message = gr.Textbox(
                                 label="", 
                                 visible=False, 
-                                interactive=False
+                                interactive=False,
+                                elem_classes=["feedback-message"]
                             )
                     
                     with gr.Tab("注册"):
@@ -129,13 +130,14 @@ def create_login_page(router):
                             reg_message = gr.Textbox(
                                 label="", 
                                 visible=False, 
-                                interactive=False
+                                interactive=False,
+                                elem_classes=["feedback-message"]
                             )
             with gr.Column(scale=1):
                 pass  # 空白列用于居中
     
     return login_page, (login_username, login_password, login_btn, login_message, 
-                       reg_username, reg_email, reg_password, reg_confirm_password, reg_btn, reg_message)
+                       reg_username, reg_email, reg_password, reg_confirm_password, reg_btn, reg_message, login_tabs)
 
 
 def create_main_app_page():
@@ -364,7 +366,7 @@ def create_video_qa_interface_routed():
         # 创建登录页面
         login_page, login_components = create_login_page(router)
         (login_username, login_password, login_btn, login_message, 
-         reg_username, reg_email, reg_password, reg_confirm_password, reg_btn, reg_message) = login_components
+         reg_username, reg_email, reg_password, reg_confirm_password, reg_btn, reg_message, login_tabs) = login_components
         
         # 创建主应用页面
         main_page, main_components = create_main_app_page()
@@ -387,40 +389,69 @@ def create_video_qa_interface_routed():
         def login_flow(username, password):
             """登录流程控制"""
             login_result = handle_login(username, password)
-            login_message_update = login_result[0]
             
             # 检查登录是否成功（通过消息内容判断）
-            if "登录成功" in str(login_message_update.get('value', '')):
-                # 登录成功，继续后续步骤
+            if "登录成功" in str(login_result.get('value', '')):
+                # 登录成功，清空表单并继续后续步骤
                 user_info_update = update_user_info()
                 page_updates = router.show_main_page()
-                return (login_message_update, page_updates[0], user_info_update[0], 
-                       user_info_update[1], page_updates[1], page_updates[2])
+                return (login_result, page_updates[0], user_info_update[0], 
+                       user_info_update[1], page_updates[1], page_updates[2],
+                       gr.update(value=""), gr.update(value=""))  # 清空登录表单
             else:
-                # 登录失败，只更新消息，不跳转页面
-                return (login_message_update, gr.update(), gr.update(), 
-                       gr.update(), gr.update(), gr.update())
+                # 登录失败，显示错误消息但不清空表单（方便用户重试）
+                return (login_result, gr.update(), gr.update(), 
+                       gr.update(), gr.update(), gr.update(),
+                       gr.update(), gr.update())  # 保持表单内容
         
         login_btn.click(
             fn=login_flow,
             inputs=[login_username, login_password],
-            outputs=[login_message, login_page, user_display, user_info_section, main_page, user_info_section]
+            outputs=[login_message, login_page, user_display, user_info_section, main_page, user_info_section,
+                    login_username, login_password]
         )
         
         # 绑定注册事件
+        def register_flow(username, email, password, confirm_password):
+            """注册流程控制"""
+            register_result = handle_register(username, email, password, confirm_password)
+            
+            # 检查注册是否成功（通过消息内容判断）
+            if "注册成功" in str(register_result.get('value', '')):
+                # 注册成功，清空表单并切换到登录标签页
+                return (
+                    register_result,             # 注册成功消息
+                    gr.update(selected=0),        # 切换到登录标签页
+                    gr.update(value=""),          # 清空用户名
+                    gr.update(value=""),          # 清空邮箱
+                    gr.update(value=""),          # 清空密码
+                    gr.update(value="")           # 清空确认密码
+                )
+            else:
+                # 注册失败，显示错误消息但不清空表单（方便用户修改）
+                return (
+                    register_result,             # 注册失败消息
+                    gr.update(),                 # 保持当前标签页
+                    gr.update(),                 # 保持用户名
+                    gr.update(),                 # 保持邮箱
+                    gr.update(),                 # 保持密码
+                    gr.update()                  # 保持确认密码
+                )
+        
         reg_btn.click(
-            fn=handle_register,
+            fn=register_flow,
             inputs=[reg_username, reg_email, reg_password, reg_confirm_password],
-            outputs=[reg_message]
+            outputs=[reg_message, login_tabs, reg_username, reg_email, reg_password, reg_confirm_password]
         )
         
         # 绑定登出事件
         logout_btn.click(
             fn=handle_logout,
-            outputs=[login_page, user_info_section]
-        ).then(
-            fn=router.show_login_page,
-            outputs=[login_page, main_page, user_info_section]
+            outputs=[login_page, main_page, user_info_section, user_display, video_selector, 
+                    conversation_history_df, chatbot, question_input, search_results, search_query,
+                    transcript_display, translated_display, video_info, processing_status, 
+                    processing_log, progress_html, upload_status, index_status, index_progress_html,
+                    translate_progress_html, translate_progress_bar, history_status, video_player]
         )
         
         # 绑定主应用事件（与原来相同）
@@ -524,24 +555,84 @@ def create_video_qa_interface_routed():
             refresh_conversation_history,
             outputs=[conversation_history_df, history_status]
         )
+        from utils.user_context import user_context
+
+        # 页面加载时检查认证状态并同步用户上下文
+        def check_auth_state():
+            """检查认证状态并同步用户上下文"""
+            try:
+                # 获取Flask层面的用户状态
+                flask_user = router.auth_bridge.current_user if router.auth_bridge else None
+                
+                # 获取Gradio层面的用户状态
+                gradio_user_id = user_context.get_current_user_id()
+                
+                # 如果Gradio有用户但Flask没有，同步到Flask
+                if gradio_user_id and not flask_user:
+                    from deploy.auth.auth_handlers import auth_bridge
+                    auth_bridge.current_user = {
+                        'user_id': gradio_user_id,
+                        'username': user_context.get_current_user_data().get('username', gradio_user_id),
+                        'token': None  # 需要重新登录获取token
+                    }
+                    print(f"同步用户状态：Gradio用户({gradio_user_id}) -> Flask")
+                
+                # 如果Flask有用户但Gradio没有，同步到Gradio
+                elif flask_user and not gradio_user_id:
+                    user_context.set_user(flask_user['user_id'], flask_user['username'])
+                    print(f"同步用户状态：Flask用户({flask_user['user_id']}) -> Gradio")
+                
+                # 如果两者都有用户但用户ID不匹配，以Flask为准并清理Gradio状态
+                elif flask_user and gradio_user_id and flask_user['user_id'] != gradio_user_id:
+                    print(f"检测到用户状态不一致：Flask用户({flask_user['user_id']}) != Gradio用户({gradio_user_id})")
+                    # 清理Gradio状态并同步到Flask用户
+                    user_context.clear_user()
+                    user_context.set_user(flask_user['user_id'], flask_user['username'])
+                    
+                    # 清理所有缓存
+                    try:
+                        from deploy.core.conversation_manager_isolated import get_conversation_manager
+                        conversation_manager = get_conversation_manager()
+                        if hasattr(conversation_manager, 'conversation_chains'):
+                            conversation_manager.conversation_chains.clear()
+                    except Exception as e:
+                        print(f"⚠️ 清理对话管理器缓存失败: {e}")
+                    
+                    try:
+                        from deploy.core.video_processor_isolated import get_isolated_processor
+                        processor = get_isolated_processor()
+                        if hasattr(processor, 'processing_status'):
+                            processor.processing_status.clear()
+                    except Exception as e:
+                        print(f"⚠️ 清理视频处理器缓存失败: {e}")
+                    
+                    print(f"✅ 用户状态已同步到Flask用户({flask_user['user_id']})")
+                
+                # 确定显示哪个页面
+                if flask_user or gradio_user_id:
+                    return router.show_main_page()
+                else:
+                    return router.show_login_page()
+                    
+            except Exception as e:
+                print(f"⚠️ 检查认证状态时发生错误: {e}")
+                # 出错时默认显示登录页面
+                return router.show_login_page()
         
         # 页面加载时检查认证状态
         demo.load(
-            fn=lambda: (
-                router.show_login_page() if not router.auth_bridge or not router.auth_bridge.current_user else router.show_main_page()
-            ),
+            fn=check_auth_state,
             outputs=[login_page, main_page, user_info_section]
         ).then(
             fn=lambda: (
-                refresh_video_list()[0] if router.auth_bridge and router.auth_bridge.current_user else [],
-                refresh_conversation_history()[0] if router.auth_bridge and router.auth_bridge.current_user else None,
-                refresh_conversation_history()[1] if router.auth_bridge and router.auth_bridge.current_user else ""
+                refresh_video_list()[0] if user_context.is_logged_in() else [],
+                refresh_conversation_history()[0] if user_context.is_logged_in() else None,
+                refresh_conversation_history()[1] if user_context.is_logged_in() else ""
             ),
             outputs=[video_selector, conversation_history_df, history_status]
         )
     
     return demo
-
 
 if __name__ == "__main__":
     # 记录系统信息
@@ -552,10 +643,39 @@ if __name__ == "__main__":
     
     # 创建并启动界面
     demo = create_video_qa_interface_routed()
+    
+    # 添加自定义CSS样式
+    custom_css = """
+    .feedback-message {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin: 8px 0;
+        font-weight: 500;
+    }
+    
+    .feedback-message textarea {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        font-weight: 500;
+    }
+    
+    .feedback-message.success textarea {
+        color: #155724 !important;
+    }
+    
+    .feedback-message.error textarea {
+        color: #721c24 !important;
+    }
+    """
+    
     demo.launch(
         server_name="localhost",
         server_port=None,
         share=False,
         debug=True,
-        theme=gr.themes.Soft()
+        theme=gr.themes.Soft(),
+        css=custom_css
     )

@@ -74,20 +74,33 @@ class MemoryItem:
 class Memory:
     """记忆管理类"""
     
-    def __init__(self, memory_type: str = "buffer"):
+    def __init__(self, memory_type: str = "buffer", user_id: Optional[str] = None):
         """
         初始化记忆管理
         
         Args:
             memory_type: 记忆类型 ('buffer', 'summary', 'knowledge_graph')
+            user_id: 用户ID，用于用户隔离
         """
         self.logger = logging.getLogger(__name__)
         
+        # 用户隔离
+        self.user_id = user_id or self._get_current_user_id()
+        self.is_isolated = self.user_id is not None
+        
         # 记忆配置
         self.memory_type = memory_type
-        self.buffer_size = settings.get_model_config('qa_system', 'buffer_size', 1000)
-        self.enable_persistence = settings.get_model_config('qa_system', 'enable_persistence', True)
-        self.storage_path = settings.MEMORY_DIR
+        buffer_size_config = settings.get_model_config('qa_system', 'buffer_size', 1000)
+        self.buffer_size = int(buffer_size_config) if buffer_size_config is not None else 1000
+        persistence_config = settings.get_model_config('qa_system', 'enable_persistence', True)
+        self.enable_persistence = bool(persistence_config) if persistence_config is not None else True
+        
+        # 获取用户专属存储路径
+        self.storage_path = self._get_user_storage_path()
+        
+        # 确保目录存在
+        if self.enable_persistence:
+            self.storage_path.mkdir(parents=True, exist_ok=True)
         
         # 记忆存储
         self.memory_items: List[MemoryItem] = []
@@ -96,6 +109,38 @@ class Memory:
         # 索引
         self.item_index: Dict[str, MemoryItem] = {}
         self.tag_index: Dict[str, List[str]] = {}
+        
+        # 统计信息
+        self.total_items = 0
+        self.total_conversations = 0
+        
+        # 加载持久化数据
+        if self.enable_persistence:
+            self._load_memory()
+        
+        self.logger.info(f"记忆管理初始化完成，类型: {self.memory_type}")
+        if self.is_isolated:
+            self.logger.info(f"用户隔离模式，用户ID: {self.user_id}")
+    
+    def _get_current_user_id(self) -> Optional[str]:
+        """获取当前用户ID"""
+        try:
+            # 避免循环导入
+            from deploy.utils.user_context import get_current_user_id
+            return get_current_user_id()
+        except ImportError:
+            return None
+    
+    def _get_user_storage_path(self) -> Path:
+        """获取用户专属存储路径"""
+        if self.is_isolated:
+            # 用户隔离路径
+            from deploy.utils.path_manager import get_path_manager
+            path_manager = get_path_manager(self.user_id)
+            return path_manager.get_memory_dir()
+        else:
+            # 共享路径
+            return settings.MEMORY_DIR
         
         # 统计信息
         self.total_items = 0
@@ -196,14 +241,24 @@ class Memory:
                 'conversation_buffer': [turn.to_dict() for turn in self.conversation_buffer],
                 'total_items': self.total_items,
                 'total_conversations': self.total_conversations,
-                'last_updated': datetime.now().isoformat()
+                'last_updated': datetime.now().isoformat(),
+                'user_id': self.user_id,
+                'is_isolated': self.is_isolated
             }
             
-            file_path = self.storage_path / f"memory_{self.memory_type}.pkl"
+            # 用户隔离的文件名
+            if self.is_isolated:
+                file_path = self.storage_path / f"memory_buffer_{self.user_id}.pkl"
+            else:
+                file_path = self.storage_path / f"memory_{self.memory_type}.pkl"
+            
             with open(file_path, 'wb') as f:
                 pickle.dump(memory_data, f)
             
-            self.logger.debug(f"记忆已保存到: {file_path}")
+            if self.is_isolated:
+                self.logger.debug(f"用户{self.user_id}的记忆已保存到: {file_path}")
+            else:
+                self.logger.debug(f"共享记忆已保存到: {file_path}")
             
         except Exception as e:
             self.logger.error(f"保存记忆失败: {e}")
@@ -214,12 +269,26 @@ class Memory:
             return
         
         try:
-            file_path = self.storage_path / f"memory_{self.memory_type}.pkl"
+            # 用户隔离的文件名
+            if self.is_isolated:
+                file_path = self.storage_path / f"memory_buffer_{self.user_id}.pkl"
+            else:
+                file_path = self.storage_path / f"memory_{self.memory_type}.pkl"
+            
             if not file_path.exists():
+                if self.is_isolated:
+                    self.logger.debug(f"用户{self.user_id}的记忆文件不存在，创建新记忆")
+                else:
+                    self.logger.debug("共享记忆文件不存在，创建新记忆")
                 return
             
             with open(file_path, 'rb') as f:
                 memory_data = pickle.load(f)
+            
+            # 验证用户ID匹配（仅对用户隔离的记忆）
+            if self.is_isolated and memory_data.get('user_id') != self.user_id:
+                self.logger.warning(f"记忆文件用户ID不匹配，跳过加载")
+                return
             
             # 恢复记忆项
             self.memory_items = [

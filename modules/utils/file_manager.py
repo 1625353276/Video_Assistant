@@ -16,15 +16,106 @@ from typing import Dict, List, Optional, Union
 from datetime import datetime
 import logging
 
+# 导入配置
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
 class FileManager:
     """文件管理服务"""
     
-    def __init__(self):
-        """初始化文件管理器"""
+    def __init__(self, user_id: Optional[str] = None):
+        """
+        初始化文件管理器
+        
+        Args:
+            user_id: 用户ID，用于用户隔离
+        """
         self.supported_formats = ['json', 'txt', 'srt', 'vtt']
+        
+        # 用户隔离
+        self.user_id = user_id or self._get_current_user_id()
+        self.is_isolated = self.user_id is not None
+        
+        # 初始化路径管理器
+        self._init_path_manager()
+    
+    def _get_current_user_id(self) -> Optional[str]:
+        """获取当前用户ID"""
+        # 尝试从用户上下文获取
+        try:
+            from deploy.utils.user_context import get_current_user_id
+            return get_current_user_id()
+        except ImportError:
+            return None
+    
+    def _init_path_manager(self):
+        """初始化路径管理器"""
+        if self.is_isolated:
+            from deploy.utils.path_manager import get_path_manager
+            self.path_manager = get_path_manager(self.user_id)
+        else:
+            # 共享模式，使用默认路径
+            from config.settings import settings
+            self.path_manager = None
+            self._base_dirs = {
+                'transcripts': settings.TRANSCRIPTS_DIR,
+                'videos': settings.RAW_VIDEOS_DIR,
+                'vectors': settings.DATA_DIR / "vectors",
+                'temp': settings.DATA_DIR / "temp"
+            }
+    
+    def get_transcripts_dir(self) -> Path:
+        """获取转录目录"""
+        dir_path = self.path_manager.get_transcripts_dir() if self.is_isolated else self._base_dirs['transcripts']
+        dir_path.mkdir(parents=True, exist_ok=True)
+        return dir_path
+    
+    def get_videos_dir(self) -> Path:
+        """获取视频目录"""
+        dir_path = self.path_manager.get_videos_dir() if self.is_isolated else self._base_dirs['videos']
+        dir_path.mkdir(parents=True, exist_ok=True)
+        return dir_path
+    
+    def get_vectors_dir(self) -> Path:
+        """获取向量目录"""
+        dir_path = self.path_manager.get_vectors_dir() if self.is_isolated else self._base_dirs['vectors']
+        dir_path.mkdir(parents=True, exist_ok=True)
+        return dir_path
+    
+    def get_temp_dir(self) -> Path:
+        """获取临时目录"""
+        dir_path = self.path_manager.get_temp_dir() if self.is_isolated else self._base_dirs['temp']
+        dir_path.mkdir(parents=True, exist_ok=True)
+        return dir_path
+    
+    def load_transcript_json(self, file_path: Path) -> Dict:
+        """
+        加载转录JSON文件
+        
+        Args:
+            file_path: 文件路径
+            
+        Returns:
+            转录数据
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"加载转录文件失败 {file_path}: {e}")
+            return {}
+    
+    def cleanup_transcripts(self):
+        """清理转录文件"""
+        try:
+            transcripts_dir = self.get_transcripts_dir()
+            for file_path in transcripts_dir.glob("*.json"):
+                file_path.unlink()
+            logger.info(f"已清理转录目录: {transcripts_dir}")
+        except Exception as e:
+            logger.error(f"清理转录文件失败: {e}")
     
     def save_transcript_json(self, transcript_data: Dict, output_path: Path) -> None:
         """

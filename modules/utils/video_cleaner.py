@@ -26,16 +26,13 @@ class VideoCleaner:
     def __init__(self):
         """初始化清理器"""
         self.upload_dirs = [
-            Path("data/uploads"),
-            Path("deploy/data/uploads")
+            Path("data/uploads")
         ]
         self.transcript_dirs = [
-            Path("data/transcripts"),
-            Path("deploy/data/transcripts")
+            Path("data/transcripts")
         ]
         self.vector_dirs = [
-            Path("data/vectors"),
-            Path("deploy/data/vectors")
+            Path("data/vectors")
         ]
         self.video_extensions = {'.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v'}
         self._registered = False

@@ -24,9 +24,33 @@ from auth.user_manager import UserManager
 from auth.auth_handler import AuthHandler
 from auth.auth_routes import create_auth_routes
 
+# 设置开发环境变量
+os.environ['FLASK_ENV'] = 'development'
+os.environ['DEBUG'] = '1'
+
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# 启动用户数据清理定时任务
+def start_cleanup_scheduler():
+    """启动定期清理任务"""
+    import threading
+    import time
+    
+    def cleanup_task():
+        while True:
+            try:
+                from deploy.utils.user_context import cleanup_inactive_users
+                cleanup_inactive_users(max_inactive_hours=24) # 每24小时清理一次
+                time.sleep(24 * 3600)  # 等待24小时
+            except Exception as e:
+                logger.error(f"用户数据清理任务出错: {e}")
+                time.sleep(3600)  # 出错后1小时再试
+    
+    cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
+    cleanup_thread.start()
+    logger.info("✅ 用户数据清理定时任务已启动")
 
 def create_app():
     """创建Flask应用"""
@@ -141,5 +165,8 @@ def create_app():
     return app
 
 if __name__ == '__main__':
+    # 启动用户数据清理定时任务
+    start_cleanup_scheduler()
+    
     app = create_app()
     app.run(host='0.0.0.0', port=5001, debug=True)

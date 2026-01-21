@@ -40,7 +40,8 @@ class ConversationChain:
                  memory: Optional[Memory] = None,
                  prompt_template: Optional[PromptTemplate] = None,
                  llm_config: Optional[Dict[str, Any]] = None,
-                 session_id: Optional[str] = None):
+                 session_id: Optional[str] = None,
+                 user_id: Optional[str] = None):
         """
         初始化对话链
         
@@ -51,6 +52,9 @@ class ConversationChain:
             llm_config: LLM配置
         """
         self.logger = logging.getLogger(__name__)
+        
+        # 用户隔离
+        self.user_id = user_id
         
         # 初始化组件
         self.retriever = retriever
@@ -83,9 +87,8 @@ class ConversationChain:
         self.enable_compression = settings.get_model_config('qa_system', 'enable_compression', True)
         self.max_context_length = settings.get_model_config('qa_system', 'max_context_length', 4000)
         
-        # 会话存储路径
-        self.sessions_dir = settings.MEMORY_DIR / "sessions"
-        self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        # 会话存储路径（支持用户隔离）
+        self._init_sessions_dir()
         
         # 初始化多查询生成器（仅使用模型扩展器）
         models_dir = settings.PROJECT_ROOT / "models"
@@ -94,6 +97,36 @@ class ConversationChain:
         )
         
         self.logger.info(f"对话链初始化完成，会话ID: {self.session_id}")
+    
+    def _init_sessions_dir(self):
+        """初始化会话存储目录（支持用户隔离）"""
+        # 获取当前用户ID
+        user_id = self._get_current_user_id()
+        
+        if user_id:
+            # 用户隔离模式
+            from deploy.utils.path_manager import get_path_manager
+            path_manager = get_path_manager(user_id)
+            self.sessions_dir = path_manager.get_conversations_dir() / "sessions"
+        else:
+            # 共享模式
+            self.sessions_dir = settings.MEMORY_DIR / "sessions"
+        
+        # 确保目录存在
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _get_current_user_id(self) -> Optional[str]:
+        """获取当前用户ID"""
+        # 优先使用构造函数传入的user_id
+        if self.user_id:
+            return self.user_id
+            
+        # 其次尝试从用户上下文获取
+        try:
+            from deploy.utils.user_context import get_current_user_id
+            return get_current_user_id()
+        except ImportError:
+            return None
     
     def _generate_session_id(self) -> str:
         """生成会话ID"""
