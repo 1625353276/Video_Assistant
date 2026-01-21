@@ -9,6 +9,9 @@ Conversation Chain Module for AI Video Assistant
 
 import json
 import logging
+import threading
+import pickle
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 
@@ -22,7 +25,7 @@ from modules.retrieval.hybrid_retriever import HybridRetriever
 from modules.retrieval.multi_query import MultiQueryGenerator
 
 # 导入对话数据结构
-from modules.qa.conversation_data import ConversationTurn
+from modules.qa.conversation_data import ConversationTurn, SessionData, VideoInfo
 
 # 导入记忆和提示模块
 from modules.qa.memory import Memory
@@ -36,7 +39,8 @@ class ConversationChain:
                  retriever: Optional[Union[VectorStore, BM25Retriever, HybridRetriever]] = None,
                  memory: Optional[Memory] = None,
                  prompt_template: Optional[PromptTemplate] = None,
-                 llm_config: Optional[Dict[str, Any]] = None):
+                 llm_config: Optional[Dict[str, Any]] = None,
+                 session_id: Optional[str] = None):
         """
         初始化对话链
         
@@ -58,19 +62,32 @@ class ConversationChain:
         # 对话状态
         self.conversation_history: List[ConversationTurn] = []
         self.current_turn_id = 0
-        self.session_id = self._generate_session_id()
+        self.session_id = session_id or self._generate_session_id()
         
         # 完整转录内容存储
         self.full_transcript = None  # 存储完整转录数据
         self.full_context_sent = False  # 标记完整内容是否已发送
         self._full_context_cache = None  # 缓存完整上下文
         
+        # 会话数据
+        self.session_data: Optional[SessionData] = None
+        self.video_info: Optional[VideoInfo] = None
+        
+        # 索引状态管理
+        self.index_ready = False
+        self._rebuild_thread: Optional[threading.Thread] = None
+        self._rebuild_lock = threading.Lock()
+        
         # 对话配置
         self.max_history_length = settings.get_model_config('qa_system', 'history_length', 10)
         self.enable_compression = settings.get_model_config('qa_system', 'enable_compression', True)
         self.max_context_length = settings.get_model_config('qa_system', 'max_context_length', 4000)
         
-# 初始化多查询生成器（仅使用模型扩展器）
+        # 会话存储路径
+        self.sessions_dir = settings.MEMORY_DIR / "sessions"
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 初始化多查询生成器（仅使用模型扩展器）
         models_dir = settings.PROJECT_ROOT / "models"
         self.multi_query = MultiQueryGenerator(
             cache_dir=str(models_dir)
@@ -80,7 +97,12 @@ class ConversationChain:
     
     def _generate_session_id(self) -> str:
         """生成会话ID"""
-        return f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        import random
+        # 使用毫秒+随机数确保唯一性
+        now = datetime.now()
+        timestamp = now.strftime('%Y%m%d_%H%M%S_%f')[:-3]  # 精确到毫秒
+        random_suffix = random.randint(1000, 9999)  # 4位随机数
+        return f"session_{timestamp}_{random_suffix}"
     
     def _retrieve_documents(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
@@ -654,8 +676,16 @@ class ConversationChain:
                 user_query=query
             )
             
-            # 检索相关文档
-            retrieved_docs = self._retrieve_documents(query, top_k)
+            # 根据索引状态选择检索策略
+            if self.index_ready and self.retriever:
+                # 使用完整的混合检索
+                retrieved_docs = self._retrieve_documents(query, top_k)
+                retrieval_method = 'hybrid'
+            else:
+                # 使用降级检索策略
+                retrieved_docs = self._fallback_retrieve(query, top_k)
+                retrieval_method = 'fallback'
+            
             current_turn.retrieved_docs = retrieved_docs
             
             # 构建上下文
@@ -666,7 +696,12 @@ class ConversationChain:
             response = self._generate_response(query, context)
             current_turn.response = response
             
-            # 不保存历史记录，每轮都是新的对话
+            # 添加到对话历史
+            self.conversation_history.append(current_turn)
+            
+            # 如果有会话数据，同步更新
+            if self.session_data:
+                self.session_data.add_conversation_turn(current_turn)
             
             # 构建返回结果
             result = {
@@ -678,13 +713,15 @@ class ConversationChain:
                 'context': context,
                 'timestamp': current_turn.timestamp.isoformat(),
                 'metadata': {
-                    'total_turns': 0,  # 不保存历史记录
+                    'total_turns': len(self.conversation_history),
                     'retrieved_count': len(retrieved_docs),
-                    'context_length': len(context)
+                    'context_length': len(context),
+                    'retrieval_method': retrieval_method,
+                    'index_ready': self.index_ready
                 }
             }
             
-            self.logger.info(f"对话处理完成，返回 {len(retrieved_docs)} 个检索结果")
+            self.logger.info(f"对话处理完成，返回 {len(retrieved_docs)} 个检索结果，方法: {retrieval_method}")
             return result
             
         except Exception as e:
@@ -706,10 +743,28 @@ class ConversationChain:
     
     def clear_history(self):
         """清空对话历史"""
+        # 清空对话历史
         self.conversation_history.clear()
         self.current_turn_id = 0
+        
+        # 清空记忆
         self.memory.clear()
-        self.logger.info("对话历史已清空")
+        
+        # 如果有会话数据，同步更新
+        if self.session_data:
+            self.session_data.conversation_history.clear()
+            self.session_data.update_timestamp()
+            
+            # 保存更改
+            self.save_session()
+            self.logger.info(f"会话 {self.session_id} 的对话历史已清空并保存")
+        else:
+            self.logger.info("对话历史已清空（无会话数据）")
+    
+    def clear_current_session(self):
+        """完全清空当前会话"""
+        self._reset_all_state()
+        self.logger.info(f"当前会话已完全清空，新会话ID: {self.session_id}")
     
     def save_conversation(self, file_path: str):
         """保存对话历史"""
@@ -760,9 +815,378 @@ class ConversationChain:
             'memory_stats': self.memory.get_stats(),
             'retriever_type': type(self.retriever).__name__ if self.retriever else None,
             'llm_provider': self.llm_config.get('provider', 'unknown'),
+            'index_ready': self.index_ready,
+            'session_loaded': self.session_data is not None,
             'config': {
                 'max_history_length': self.max_history_length,
                 'enable_compression': self.enable_compression,
                 'max_context_length': self.max_context_length
             }
         }
+    
+    def set_video_info(self, filename: str, duration: float, language: str = "zh", 
+                      file_size: Optional[int] = None, resolution: Optional[str] = None):
+        """
+        设置视频信息
+        
+        Args:
+            filename: 视频文件名
+            duration: 视频时长（秒）
+            language: 视频语言
+            file_size: 文件大小（字节）
+            resolution: 视频分辨率
+        """
+        self.video_info = VideoInfo(
+            filename=filename,
+            duration=duration,
+            language=language,
+            file_size=file_size,
+            resolution=resolution
+        )
+        
+        # 如果会话数据已存在，更新视频信息
+        if self.session_data:
+            self.session_data.video_info = self.video_info
+            self.session_data.update_timestamp()
+        
+        self.logger.info(f"设置视频信息: {filename}, 时长: {duration}秒")
+    
+    def create_session(self, transcript: List[Dict[str, Any]]) -> str:
+        """
+        创建新会话
+        
+        Args:
+            transcript: 转录文本列表
+            
+        Returns:
+            会话ID
+        """
+        if not self.video_info:
+            raise ValueError("请先设置视频信息")
+        
+        # 创建会话数据
+        self.session_data = SessionData(
+            session_id=self.session_id,
+            video_info=self.video_info,
+            transcript=transcript,
+            conversation_history=[]
+        )
+        
+        # 设置转录文本
+        self.set_full_transcript(transcript)
+        
+        # 保存会话
+        self.save_session()
+        
+        self.logger.info(f"创建新会话: {self.session_id}")
+        return self.session_id
+    
+    def new_conversation(self, video_filename: str, duration: float, 
+                        transcript: List[Dict[str, Any]], language: str = "zh",
+                        file_size: Optional[int] = None, resolution: Optional[str] = None) -> str:
+        """
+        创建全新的对话（新会话）
+        
+        Args:
+            video_filename: 视频文件名
+            duration: 视频时长
+            transcript: 转录文本列表
+            language: 视频语言
+            file_size: 文件大小
+            resolution: 视频分辨率
+            
+        Returns:
+            新会话ID
+        """
+        # 完全重置当前状态
+        self._reset_all_state()
+        
+        # 设置视频信息
+        self.set_video_info(
+            filename=video_filename,
+            duration=duration,
+            language=language,
+            file_size=file_size,
+            resolution=resolution
+        )
+        
+        # 创建新会话
+        session_id = self.create_session(transcript)
+        
+        self.logger.info(f"创建全新对话，会话ID: {session_id}")
+        return session_id
+    
+    def _reset_all_state(self):
+        """重置所有状态"""
+        # 清空对话历史
+        self.conversation_history.clear()
+        self.current_turn_id = 0
+        
+        # 清空转录相关
+        self.full_transcript = None
+        self._full_context_cache = None
+        self.full_context_sent = False
+        
+        # 清空会话数据
+        self.session_data = None
+        self.video_info = None
+        
+        # 重置索引状态
+        self.index_ready = False
+        
+        # 停止后台重建线程
+        if self._rebuild_thread and self._rebuild_thread.is_alive():
+            # 线程会自动结束，因为我们清空了数据
+            pass
+        
+        # 清空检索器
+        if self.retriever:
+            if hasattr(self.retriever, 'vector_store'):
+                self.retriever.vector_store.clear()
+            if hasattr(self.retriever, 'bm25_retriever'):
+                self.retriever.bm25_retriever.clear()
+        
+        # 清空记忆
+        self.memory.clear()
+        
+        # 生成新的会话ID
+        self.session_id = self._generate_session_id()
+        
+        self.logger.info(f"所有状态已重置，新会话ID: {self.session_id}")
+    
+    def save_session(self) -> bool:
+        """
+        保存当前会话
+        
+        Returns:
+            是否保存成功
+        """
+        if not self.session_data:
+            self.logger.warning("没有会话数据可保存")
+            return False
+        
+        try:
+            # 更新会话数据
+            self.session_data.conversation_history = self.conversation_history
+            self.session_data.update_timestamp()
+            
+            # 保存到文件
+            session_file = self.sessions_dir / f"{self.session_id}.json"
+            with open(session_file, 'w', encoding='utf-8') as f:
+                json.dump(self.session_data.to_dict(), f, ensure_ascii=False, indent=2)
+            
+            self.logger.info(f"会话已保存: {session_file}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"保存会话失败: {e}")
+            return False
+    
+    def load_session(self, session_id: str) -> bool:
+        """
+        加载历史会话
+        
+        Args:
+            session_id: 会话ID
+            
+        Returns:
+            是否加载成功
+        """
+        try:
+            # 加载会话文件
+            session_file = self.sessions_dir / f"{session_id}.json"
+            if not session_file.exists():
+                self.logger.error(f"会话文件不存在: {session_file}")
+                return False
+            
+            with open(session_file, 'r', encoding='utf-8') as f:
+                session_dict = json.load(f)
+            
+            # 恢复会话数据
+            self.session_data = SessionData.from_dict(session_dict)
+            self.session_id = session_id
+            self.video_info = self.session_data.video_info
+            
+            # 恢复对话历史
+            self.conversation_history = self.session_data.conversation_history
+            self.current_turn_id = max([turn.turn_id for turn in self.conversation_history], default=0)
+            
+            # 恢复转录文本
+            self.set_full_transcript(self.session_data.transcript)
+            
+            # 重置索引状态
+            self.index_ready = False
+            
+            # 启动后台索引重建
+            self._start_index_rebuild()
+            
+            self.logger.info(f"会话加载成功: {session_id}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"加载会话失败: {e}")
+            return False
+    
+    def _start_index_rebuild(self):
+        """启动后台索引重建"""
+        with self._rebuild_lock:
+            if self._rebuild_thread and self._rebuild_thread.is_alive():
+                self.logger.info("索引重建线程已在运行")
+                return
+            
+            self._rebuild_thread = threading.Thread(
+                target=self._rebuild_indexes,
+                daemon=True
+            )
+            self._rebuild_thread.start()
+            self.logger.info("启动后台索引重建")
+    
+    def _rebuild_indexes(self):
+        """重建索引（在后台线程中执行）"""
+        try:
+            if not self.full_transcript:
+                self.logger.warning("没有转录文本，跳过索引重建")
+                return
+            
+            self.logger.info("开始重建索引")
+            
+            # 准备文档数据
+            documents = []
+            for segment in self.full_transcript:
+                documents.append({
+                    'text': segment['text'],
+                    'start': segment['start'],
+                    'end': segment['end'],
+                    'confidence': segment.get('confidence', 1.0)
+                })
+            
+            # 清空现有索引
+            if self.retriever:
+                if hasattr(self.retriever, 'vector_store'):
+                    self.retriever.vector_store.clear()
+                if hasattr(self.retriever, 'bm25_retriever'):
+                    self.retriever.bm25_retriever.clear()
+            
+            # 重建索引
+            if self.retriever:
+                self.retriever.add_documents(documents)
+            
+            # 标记索引准备就绪
+            self.index_ready = True
+            self.logger.info("索引重建完成")
+            
+        except Exception as e:
+            self.logger.error(f"索引重建失败: {e}")
+            # 即使失败，也可以使用简单的文本检索
+            self.index_ready = False
+    
+    def get_session_status(self) -> Dict[str, Any]:
+        """
+        获取会话状态
+        
+        Returns:
+            会话状态信息
+        """
+        return {
+            'session_id': self.session_id,
+            'session_loaded': self.session_data is not None,
+            'video_info': self.video_info.to_dict() if self.video_info else None,
+            'conversation_turns': len(self.conversation_history),
+            'index_ready': self.index_ready,
+            'index_building': self._rebuild_thread and self._rebuild_thread.is_alive(),
+            'transcript_segments': len(self.full_transcript) if self.full_transcript else 0
+        }
+    
+    def list_sessions(self) -> List[Dict[str, Any]]:
+        """
+        列出所有保存的会话
+        
+        Returns:
+            会话列表
+        """
+        sessions = []
+        
+        for session_file in self.sessions_dir.glob("*.json"):
+            try:
+                with open(session_file, 'r', encoding='utf-8') as f:
+                    session_dict = json.load(f)
+                
+                session_info = {
+                    'session_id': session_dict['session_id'],
+                    'video_filename': session_dict['video_info']['filename'],
+                    'video_duration': session_dict['video_info']['duration'],
+                    'conversation_turns': len(session_dict.get('conversation_history', [])),
+                    'transcript_segments': len(session_dict.get('transcript', [])),
+                    'created_at': session_dict['created_at'],
+                    'updated_at': session_dict['updated_at']
+                }
+                sessions.append(session_info)
+                
+            except Exception as e:
+                self.logger.error(f"读取会话文件失败 {session_file}: {e}")
+        
+        # 按更新时间排序
+        sessions.sort(key=lambda x: x['updated_at'], reverse=True)
+        return sessions
+    
+    def delete_session(self, session_id: str) -> bool:
+        """
+        删除会话
+        
+        Args:
+            session_id: 会话ID
+            
+        Returns:
+            是否删除成功
+        """
+        try:
+            session_file = self.sessions_dir / f"{session_id}.json"
+            if session_file.exists():
+                session_file.unlink()
+                self.logger.info(f"会话已删除: {session_id}")
+                return True
+            else:
+                self.logger.warning(f"会话文件不存在: {session_id}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"删除会话失败: {e}")
+            return False
+    
+    def _fallback_retrieve(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        降级检索策略（当索引未准备好时使用）
+        
+        Args:
+            query: 查询文本
+            top_k: 返回文档数量
+            
+        Returns:
+            检索结果
+        """
+        if not self.full_transcript:
+            return []
+        
+        # 简单的文本匹配
+        results = []
+        query_lower = query.lower()
+        
+        for segment in self.full_transcript:
+            text = segment.get('text', '')
+            if query_lower in text.lower():
+                # 计算简单的相关性分数
+                score = min(1.0, text.lower().count(query_lower) * 0.1 + 0.5)
+                
+                result = {
+                    'document': segment,
+                    'metadata': {},
+                    'score': score,
+                    'similarity': score,
+                    'bm25_score': score,
+                    'index': len(results)
+                }
+                results.append(result)
+        
+        # 按分数排序并限制数量
+        results.sort(key=lambda x: x['score'], reverse=True)
+        return results[:top_k]

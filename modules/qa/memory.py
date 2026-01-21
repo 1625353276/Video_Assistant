@@ -533,6 +533,126 @@ class Memory:
         except Exception as e:
             self.logger.error(f"导出记忆失败: {e}")
     
+    def save_session_index(self) -> Dict[str, Any]:
+        """
+        保存会话索引
+        
+        Returns:
+            会话索引信息
+        """
+        try:
+            # 扫描会话目录
+            sessions_dir = self.storage_path / "sessions"
+            if not sessions_dir.exists():
+                return {'sessions': [], 'total_count': 0}
+            
+            session_list = []
+            for session_file in sessions_dir.glob("*.json"):
+                try:
+                    with open(session_file, 'r', encoding='utf-8') as f:
+                        session_data = json.load(f)
+                    
+                    session_info = {
+                        'session_id': session_data['session_id'],
+                        'video_filename': session_data['video_info']['filename'],
+                        'video_duration': session_data['video_info']['duration'],
+                        'conversation_turns': len(session_data.get('conversation_history', [])),
+                        'created_at': session_data['created_at'],
+                        'updated_at': session_data['updated_at'],
+                        'file_path': str(session_file)
+                    }
+                    session_list.append(session_info)
+                    
+                except Exception as e:
+                    self.logger.error(f"读取会话文件失败 {session_file}: {e}")
+            
+            # 按更新时间排序
+            session_list.sort(key=lambda x: x['updated_at'], reverse=True)
+            
+            # 保存索引
+            index_data = {
+                'sessions': session_list,
+                'total_count': len(session_list),
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            index_file = self.storage_path / "session_index.json"
+            with open(index_file, 'w', encoding='utf-8') as f:
+                json.dump(index_data, f, ensure_ascii=False, indent=2)
+            
+            self.logger.info(f"会话索引已更新，共 {len(session_list)} 个会话")
+            return index_data
+            
+        except Exception as e:
+            self.logger.error(f"保存会话索引失败: {e}")
+            return {'sessions': [], 'total_count': 0}
+    
+    def load_session_index(self) -> Dict[str, Any]:
+        """
+        加载会话索引
+        
+        Returns:
+            会话索引信息
+        """
+        try:
+            index_file = self.storage_path / "session_index.json"
+            if not index_file.exists():
+                return self.save_session_index()
+            
+            with open(index_file, 'r', encoding='utf-8') as f:
+                index_data = json.load(f)
+            
+            return index_data
+            
+        except Exception as e:
+            self.logger.error(f"加载会话索引失败: {e}")
+            return {'sessions': [], 'total_count': 0}
+    
+    def cleanup_old_sessions(self, max_sessions: int = 100, max_age_days: int = 30) -> int:
+        """
+        清理旧会话
+        
+        Args:
+            max_sessions: 最大保留会话数
+            max_age_days: 最大保留天数
+            
+        Returns:
+            删除的会话数量
+        """
+        try:
+            sessions_dir = self.storage_path / "sessions"
+            if not sessions_dir.exists():
+                return 0
+            
+            # 获取所有会话文件
+            session_files = list(sessions_dir.glob("*.json"))
+            if len(session_files) <= max_sessions:
+                return 0
+            
+            # 按修改时间排序
+            session_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+            
+            # 计算截止时间
+            cutoff_time = datetime.now().timestamp() - (max_age_days * 24 * 3600)
+            
+            deleted_count = 0
+            for session_file in session_files[max_sessions:]:
+                # 检查文件年龄
+                if session_file.stat().st_mtime < cutoff_time:
+                    session_file.unlink()
+                    deleted_count += 1
+                    self.logger.info(f"删除旧会话: {session_file.name}")
+            
+            # 更新索引
+            if deleted_count > 0:
+                self.save_session_index()
+            
+            return deleted_count
+            
+        except Exception as e:
+            self.logger.error(f"清理旧会话失败: {e}")
+            return 0
+    
     def import_memory(self, file_path: str, format: str = 'json'):
         """
         导入记忆
