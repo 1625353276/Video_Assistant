@@ -78,7 +78,7 @@ class PageRouter:
 
 def create_login_page(router):
     """创建登录页面"""
-    with gr.Group(visible=True) as login_page:
+    with gr.Column(visible=True) as login_page:
         gr.Markdown("# 🔐 用户登录")
         gr.Markdown("请登录以使用视频智能问答助手")
         
@@ -142,7 +142,7 @@ def create_login_page(router):
 
 def create_main_app_page():
     """创建主应用页面"""
-    with gr.Group(visible=False) as main_page:
+    with gr.Column(visible=False) as main_page:
         gr.Markdown("# 🎥 视频智能问答助手")
         gr.Markdown("上传视频，进行智能问答")
         
@@ -341,16 +341,15 @@ def create_main_app_page():
 
 def create_user_info_section():
     """创建用户信息区域"""
-    with gr.Group(visible=False) as user_info_section:
-        with gr.Row():
-            with gr.Column(scale=4):
-                user_display = gr.Textbox(
-                    label="当前用户", 
-                    interactive=False,
-                    value="未登录"
-                )
-            with gr.Column(scale=1):
-                logout_btn = gr.Button("登出", variant="secondary")
+    with gr.Row(visible=False) as user_info_section:
+        with gr.Column(scale=4):
+            user_display = gr.Textbox(
+                label="当前用户", 
+                interactive=False,
+                value="未登录"
+            )
+        with gr.Column(scale=1):
+            logout_btn = gr.Button("登出", variant="secondary")
     
     return user_info_section, user_display, logout_btn
 
