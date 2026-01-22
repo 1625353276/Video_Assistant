@@ -252,6 +252,13 @@ def rate_limit(max_requests: int = 100, window_seconds: int = 3600):
     Returns:
         Callable: 装饰器函数
     """
+    # 检查是否为开发环境，如果是则放宽限制
+    import os
+    if os.getenv('FLASK_ENV') == 'development' or os.getenv('DEBUG'):
+        # 开发环境下放宽限制
+        max_requests *= 3
+        window_seconds = min(window_seconds, 60)  # 最多1分钟窗口
+    
     # 简单的内存存储（生产环境应使用Redis等）
     rate_limit_store = {}
     
@@ -278,12 +285,20 @@ def rate_limit(max_requests: int = 100, window_seconds: int = 3600):
             
             # 检查请求数量
             if len(rate_limit_store[client_id]) >= max_requests:
+                # 计算最早请求的剩余时间
+                if rate_limit_store[client_id]:
+                    oldest_request = min(rate_limit_store[client_id])
+                    retry_after = max(0, oldest_request + window_seconds - now)
+                else:
+                    retry_after = window_seconds
+                
                 return create_error_response(
-                    '请求过于频繁，请稍后再试',
+                    f'请求过于频繁，请在 {retry_after} 秒后重试',
                     429,
                     {
-                        'retry_after': window_seconds,
-                        'max_requests': max_requests
+                        'retry_after': retry_after,
+                        'max_requests': max_requests,
+                        'window_seconds': window_seconds
                     }
                 )
             

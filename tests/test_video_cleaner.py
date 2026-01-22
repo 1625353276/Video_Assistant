@@ -25,7 +25,7 @@ def create_test_video_files():
     test_files = []
     
     # 确保测试目录存在
-    upload_dirs = [Path("data/uploads"), Path("deploy/data/uploads")]
+    upload_dirs = [Path("data/uploads")]
     for upload_dir in upload_dirs:
         upload_dir.mkdir(parents=True, exist_ok=True)
         

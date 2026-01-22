@@ -72,6 +72,17 @@ class GradioBridge:
             )
             
             result = response.json()
+            
+            # 处理速率限制
+            if response.status_code == 429:
+                retry_after = result.get('retry_after', 60)
+                logger.warning(f"遇到速率限制，{retry_after}秒后重试")
+                return {
+                    'success': False,
+                    'message': f'请求过于频繁，请等待 {retry_after} 秒后重试',
+                    'retry_after': retry_after
+                }
+            
             logger.info(f"用户注册结果: {result.get('message', '')}")
             return result
             
@@ -104,6 +115,16 @@ class GradioBridge:
             )
             
             result = response.json()
+            
+            # 处理速率限制
+            if response.status_code == 429:
+                retry_after = result.get('retry_after', 60)
+                logger.warning(f"遇到速率限制，{retry_after}秒后重试")
+                return {
+                    'success': False,
+                    'message': f'请求过于频繁，请等待 {retry_after} 秒后重试',
+                    'retry_after': retry_after
+                }
             
             # 如果登录成功，保存令牌
             if result.get('success') and 'token' in result:

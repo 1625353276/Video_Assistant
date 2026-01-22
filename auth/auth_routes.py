@@ -32,7 +32,7 @@ def create_auth_routes(user_manager: UserManager, auth_handler: AuthHandler) -> 
     """
     
     @auth_bp.route('/register', methods=['POST'])
-    @rate_limit(max_requests=5, window_seconds=300)  # 5分钟内最多5次注册请求
+    @rate_limit(max_requests=20, window_seconds=300)  # 5分钟内最多20次注册请求
     @validate_json(
         required_fields=['username', 'email', 'password'],
         optional_fields=['metadata']
@@ -70,7 +70,7 @@ def create_auth_routes(user_manager: UserManager, auth_handler: AuthHandler) -> 
             return create_error_response('服务器内部错误', 500)
     
     @auth_bp.route('/login', methods=['POST'])
-    @rate_limit(max_requests=10, window_seconds=300)  # 5分钟内最多10次登录请求
+    @rate_limit(max_requests=30, window_seconds=300)  # 5分钟内最多30次登录请求
     @validate_json(
         required_fields=['username_or_email', 'password'],
         optional_fields=['user_agent', 'ip_address']
@@ -124,7 +124,7 @@ def create_auth_routes(user_manager: UserManager, auth_handler: AuthHandler) -> 
             return create_error_response('服务器内部错误', 500)
     
     @auth_bp.route('/refresh', methods=['POST'])
-    @rate_limit(max_requests=5, window_seconds=300)  # 5分钟内最多5次刷新请求
+    @rate_limit(max_requests=15, window_seconds=300)  # 5分钟内最多15次刷新请求
     @validate_json(required_fields=['token'])
     def refresh_token():
         """刷新令牌"""
